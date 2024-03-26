@@ -32,18 +32,49 @@ When a single piece of circuit board, comprises most of the personal Computer ha
    
 Hence it is called as single board computer. Another most famous SBC is Raspberry PI but it is partially an “open hardware” because the SOC manufacturer hides the details.    
    
-<img src="images/bbb_intro.png" alt="Non ReatTime Vs RealTime" title="Non ReatTime Vs RealTime">   
-<img src="images/bbb_intro2.png" alt="Non ReatTime Vs RealTime" title="Non ReatTime Vs RealTime">   
-<img src="images/bbb_intro3.png" alt="Non ReatTime Vs RealTime" title="Non ReatTime Vs RealTime">    
-<img src="images/bbb_intro4.png" alt="Non ReatTime Vs RealTime" title="Non ReatTime Vs RealTime">    
-<img src="images/bbb_intro5.png" alt="Non ReatTime Vs RealTime" title="Non ReatTime Vs RealTime">    
-<img src="images/bbb_intro6.png" alt="Non ReatTime Vs RealTime" title="Non ReatTime Vs RealTime">    
-<img src="images/bbb_intro7.png" alt="Non ReatTime Vs RealTime" title="Non ReatTime Vs RealTime">    
-<img src="images/bbb_intro8.png" alt="Non ReatTime Vs RealTime" title="Non ReatTime Vs RealTime">    
-<img src="images/bbb_intro9.png" alt="Non ReatTime Vs RealTime" title="Non ReatTime Vs RealTime">     
-<img src="images/bbb_intro10.png" alt="Non ReatTime Vs RealTime" title="Non ReatTime Vs RealTime">  
-<img src="images/bbb_intro11.png" alt="Non ReatTime Vs RealTime" title="Non ReatTime Vs RealTime">    
-<img src="images/bbb_intro12.png" alt="Non ReatTime Vs RealTime" title="Non ReatTime Vs RealTime">    
+<img src="images/bbb_intro.png" alt="Non ReatTime Vs RealTime" title="BBB Introduction">   
+<img src="images/bbb_intro2.png" alt="Non ReatTime Vs RealTime" title="BBB Introduction">   
+<img src="images/bbb_intro3.png" alt="Non ReatTime Vs RealTime" title="BBB Introduction">    
+<img src="images/bbb_intro4.png" alt="Non ReatTime Vs RealTime" title="BBB Introduction">    
+<img src="images/bbb_intro5.png" alt="Non ReatTime Vs RealTime" title="BBB Introduction">    
+<img src="images/bbb_intro6.png" alt="Non ReatTime Vs RealTime" title="BBB Introduction">    
+<img src="images/bbb_intro7.png" alt="Non ReatTime Vs RealTime" title="BBB Introduction">    
+<img src="images/bbb_intro8.png" alt="Non ReatTime Vs RealTime" title="BBB Introduction">    
+<img src="images/bbb_intro9.png" alt="Non ReatTime Vs RealTime" title="BBB Introduction">     
+<img src="images/bbb_intro10.png" alt="Non ReatTime Vs RealTime" title="BBB Introduction">  
+<img src="images/bbb_intro11.png" alt="Non ReatTime Vs RealTime" title="BBB Introduction">    
+<img src="images/bbb_intro12.png" alt="Non ReatTime Vs RealTime" title="BBB Introduction">   
+   
+    
+## Connecting BBB and USB to serial TTL convertor hardware or cable    
+   
+ As I mentioned in the previous document, you can use either a standalone USB to serial TTL convertor hardware like shown below (you should arrange for the connecting jumper wires though)   
+<img src="images/usb_ttl.png" alt="Non ReatTime Vs RealTime" title="BBB and USB-TTL converter">   
+   
+Or, you may use the USB to serial TTL converter with cable like below. This is more convenient because it has good length and you need not to bother about connecting to BBB using jumper wires.
+
+This cable has embedded “USB to serial “converter chip inside.  
+   
+<img src="images/usb_ttl2.png" alt="Non ReatTime Vs RealTime" title="BBB and USB-TTL converter">   
+   
+And always remember when you connect  “USB to Serial Convertor” to any hardware like BBB, the TX pin of this module should go to the RX pin of the another board, in this case BBB. Take look in to the table below for connection details. It’s very simple.   
+   
+<img src="images/usb_ttl3.png" alt="Non ReatTime Vs RealTime" title="BBB and USB-TTL converter">   
+   
+Here is a BBB schematic details of J1 UART0 pins   
+    
+<img src="images/usb_ttl4.png" alt="Non ReatTime Vs RealTime" title="BBB and USB-TTL converter">   
+   
+
+  
+   
+
+   
+  
+   
+    
+   
+   
     
   
  
