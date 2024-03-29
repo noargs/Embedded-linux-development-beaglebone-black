@@ -65,6 +65,55 @@ Here is a BBB schematic details of J1 UART0 pins
     
 <img src="images/usb_ttl4.png" alt="Non ReatTime Vs RealTime" title="BBB and USB-TTL converter">   
    
+## Serial port monitoring software   
+    
+<img src="images/serial_port_monitoring.png" alt="Serial port monitoring">   
+   
+**Using Minicom**   
+   
+Confirm by running `sudo minicom` command in terminal to see if `Minicom` already installed  
+    
+OR   
+   
+Install on Ubuntu by first running `sudo apt-get update` and then `sudo apt-get install minicom`   
+   
+
+## Configure minicom on first time install    
+   
+Just connect your USB to UART convertor hardware to the PC (not beaglebone hardware.)  
+   
+Run the `dmesg` on terminal   
+     
+<img src="images/dmesg.png" alt="dmesg to check chipset info">   
+      
+> Chipset converter `pl2303` is detected and attached to ttyUSB0. Alternatively, if you are using FTDI, then following output will be shown in terminal as shown below    
+   
+<img src="images/ftdi.png" alt="FTDI FT232R">    
+   
+Type `sudo minicom -s` to configure the minicom and configure `Serial port setup` by choosing  
+    
+<img src="images/minicom_output.png" alt="Minicom output">   
+   
+Keep the **Hardware Flow Control** and **Software Flow Control** as **No** as according to BBB Schematic, it doesn't have this feature available on the board   
+    
+<img src="images/usb-ttl_no_hw.png" alt="Hardware flow control">   
+   
+Finally `Save setupt as dfl` so we don't have to setup the configuration again and again.   
+    
+
+   
+    
+
+      
+    
+
+   
+
+  
+   
+
+   
+
 
   
    
