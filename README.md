@@ -156,7 +156,7 @@ The **eMMC** memory is actually connected to the **mmc1** interface and the **mi
 > If your board already running latest version of debian OS image, then you NEED NOT to try this.   
 > Check your BBB debian OS version `$ lsb_release -da` and compare the output with debian latest release. (You have to log into BBB by `minicom` if you aren't able to find the right `/dev/<PORT>` then use `$ dmesg` command)
 
-
+To configure BBB Network connection over USB, follow the Networking [guide](Docs/Networking.pdf) 
 
 
 
