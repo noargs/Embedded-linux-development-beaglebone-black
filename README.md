@@ -162,11 +162,167 @@ As disscussed in the Networking guide following commands has to be saved in the 
 
 <img src="images/internetToTarget_BBB.png" alt="internetToTarget BBB">    
 
-<img src="images/internetToTarget_HOST.png" alt="internetToTarget Host">             
+<img src="images/internetToTarget_HOST.png" alt="internetToTarget Host">    
+
+
+## BBB Linux booting process                    
+
+Let's explore, How to boot the Linux kernel on the ARM based hardware such as Beaglebone Black target hardware which is powered by the SOC AM335x (ARM cortex A8 processor) from Texas Instruments.    
+      
+To run Linux on this embedded board, we need minimum of 4 software components as shown below.     
+      
+<img src="images/linux_boot_req.png" alt="Linux Boot Requirement">   
+    
+**RBL (ROM Boot Loader)**     
+    
+A very tiny boot loader with limited functionalities runs out of the ROM memory of the SOC when you power up the board. This boot loader is written by the vendor, in our case, written by the Texas Instruments, and stored in the ROM of the SOC during taping out of the chip. You cannot change this boot loader (cannot overwrite). You may also not get the source code of this boot loader. Primary job of the RBL is to load and execute the second stage boot loader **SPL/MLO** from the internal memory (_SRAM_) of the SOC.    
+     
+**SPL/MLO (Secondary Program Loader / Memory Loader)**   
+     
+The job of the Secondary stage boot loader is to load and execute the Third stage boot loader **U-boot** from the DDR memory of the board. 
+    
+**U-boot**      
+    
+The job of the Third stage boot loader is to load and execute the Linux kernel from the DDR memory of the board. Hence the booting actually takes place in 3 stages.
+
+_And to complete the successful boot of the **Linux kernal**, we also need a root file system **RFS**_ 
+     
+      
+## BeagleBone Board Boot options    
+     
+you can boot the AM335x SOC from the following boot sources    
+      
+1. NAND Flash    
+2. NOR Flash (eXecute In place, XIP)    
+3. USB    
+4. eMMC    
+5. SD card   
+6. Ethernet    
+7. UART   
+8. SPI          
+    
+_Page number 4106 of the [TRM](Docs/TRM_AM335x_techincal_reference_manual.pdf) , you will find the below table._    
+     
+<img src="images/sysboot_config.png" alt="SYSBOOT Configuration">   
+    
+Take a look at _SYSBOOT[4:0]_ `SYSBOOT` is one of the register of this SOC and its first five bits decide the boot order .   
+   
+For example,   
+When SYSBOOT [4:0] = 00000b (This is reserved, you cannot use this configuration)
+When SYSBOOT [4:0] = 00001b then **1st** SOC will try to boot from UART0, if fails, **2nd** it tries to boot from XIP (XIP stands for eXutable In Place memory like NOR Flash), if that also fails, **3rd** it will try to boot from MMC0, if no success, **4th** it tries to boot from SPI0, if that also fails, then SOC outputs the error message and stops.  
+
+## How SOC decides the boot order?    
+
+When you reset the SOC, the code stored in the ROM of the SOC runs first !    
+     
+<img src="images/boot_order.png" alt="SYSBOOT Configuration">   
+    
+The code stored in the “ROM” is called **ROM boot loader**, this is programmed in to the ROM of the SOC during taping out of the chip, you cannot change it as it is in the ROM Read only.
+
+The job of the ROM is to set up the SOC clock, watch dog timer, etc and load the second stage boot loader (MLO or SPL). By reading the register SYSBOOT [15:0], and based on the value of SYSBOOT[4:0] it prepares the list of booting devices. The register SYSBOOT [15:0] value is decided by the voltage level on the SYSBOOT pins.
+
+Hence, if SYSBOOT[4:0] = 00011b, then boot order will be , UART0, SPI0, XIP, MMC0 (as shown in the above table). Therefore, we can say that, The SYSBOOT pins configure the boot device order (set by SYSBOOT[4:0]). Some board, will give you the control to change the SYSBOOT[15:0] value by using dip switches like below.      
+     
+<img src="images/dip_switches.jpg" alt="Board with Dip switches">   
+    
+However, in the BBB, there are no such dip switches to configure the SYSBOOT pins. BBB has some other circuitry to decide the SYSBOOT pins voltage level, read on!!    
+    
+## BBB Boot order configuration circuit   
+   
+In BBB you will find this circuitry, (In the [SRM](BBB_SRM.pdf))    
+     
+<img src="images/boot_config_design.png" alt="Processor boot configuration design">   
+     
+Here observe that SYS_BOOT2 is connected to a button S2 (Boot button) of the BBB.
+
+When you simply give power to the board, You will find the voltage level as below.
+
+SYS_BOOT0 = 0V
+
+SYS_BOOT1 = 0V
+
+SYS_BOOT2 =1V
+
+SYS_BOOT3 = 1V
+
+SYS_BOOT4 = 1V
+
+You can confirm this by measuring the voltage level using Mutlimeter (voltage of 45, 44, 43,41, 40 pins of the expansion header P8 of the board as SYSBOOT[4:0] = 11100)   
+     
+<img src="images/expansion_header.png" alt="Expansion headers">   
+     
+And when you press the S2 button, SYS_BOOT2 will be grounded , so SYSBOOT[4:0]= 11000     
+      
+Now based on S2 (BBB boot button) we got 2 boot configurations:
+
+1. S2 released (SYSBOOT[4:0] = 11100)
+
+The boot order will be
+
+MMC1 (eMMC)
+MMC0 (SD card)
+UART0
+USB0
+
+2. S2 pressed (SYSBOOT[4:0] = 11000) , The boot order will be
+
+SPI0
+MMC0 (SD card)
+USB0
+UART0
+
+So, to conclude, there are 5 boot sources supported for this board including SPI.    
+     
+1) eMMC Boot(MMC1) :
+
+ eMMC is connected over MMC1 interface, This is the fastest boot mode possible, eMMC is right there on your board, so need not to purchase any external components or memory chip. This is the default boot mode. As soon as you reset the board, the board start booting from loading the images stored in the eMMC.   
+ 
+ If no proper boot image is found in the eMMC, then Processor will automatically try to boot from the next device on the list. 
+
+2) SD Boot :
+
+ If the default ( that is booting from eMMC) boot mode fails, then it will try to boot from the SD card you connected to the sd card connector at MMC0 interface. 
+ 
+ If you press S2 and then apply the power, then the board will try to boot from the SPI first, and if nothing is connected to SPI, it will try to boot from the MMC0 where our SD card is found
+
+Also remember that we can use SD card boot to flash boot images on the eMMC. So if you want to write new images on the eMMC  then you can boot through sd card, then write new images to eMMC, then reset the board, so that your board can boot using new images stored in the eMMC.  We will do these experiments later in this course. Don’t worry!
+
+3) Serial boot :   
+
+In this mode, the ROM code of the SOC will try to download the boot images from the serial port.
+
+We have separate experiment on this boot mode and its very interesting. 
+
+4 ) USB BOOT :   
+
+You may be familiar with this boot mode, that is booting through usb stick!   
+
+You would have booted your PC through the usb stick. What you do is, you restart the PC, then press bios button to put the PC in to bios mode, there you select boot form usb, right  
+
+It is very similar, when you reset the board, you can make your board to boot from the USB stick. 
+
+## More details about ROM Code Booting procedure!
+
+These are the 2 flow charts, you can find in the [TRM](Docs/TRM_AM335x_techincal_reference_manual.pdf) **page 4103** of the am335x SOC    
+     
+<img src="images/boot_procedure.png" alt="ROM Code Booting procedure">   
+         
+Here, you can see that the ROM code goes through its boot device list to load the Second stage boot loader (SPL/MLO). **It will prepare the boot devices list based on the value of SYSBOOT pins**. 
+
+## The ROM Code start-up procedure    
+    
+(page 4102)       
+     
+<img src="images/startup_procedure.png " alt="Startup procedure">   
+         
+
+
+   
 
 
 
-
+    
+     
 
 
    
