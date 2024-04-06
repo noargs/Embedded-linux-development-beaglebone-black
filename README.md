@@ -128,44 +128,10 @@ Let's login now in the Serial window of minicom with debain username `debian` an
 On second terminal run `ping 192.168.7.2` to confirm that communication with beaglebone hardware is working over USB mini B at P4 (Internet over USB). You can now ssh beaglebone with `ssh -l debian 192.168.7.2` 
     
 > [!NOTE]    
-> Use the Virtual machine only when you want to compile the kernel, bootloader, or use the build root software i.e. busy box. However if you only want to write application for the beaglebone then just use the **eclipse** which is installed on your primary operating system such Windows, Mac etc. **You don't need to install Eclipse on the virtual machine for application development purpose**
-
-
-## Updating the eMMC memory with the latest debian OS image and BBB Network configurations.   
-   
-We will flash eMMC of the Beaglebone board and then boot the Beagleboard using the eMMC memory (Revision C, onboard 4GB of eMMC memory) and the board already comes with pre-stored Debian OS, However we will reflash the Debian OS present on the eMMC memory of the board (for learning purposes and understand the working).    
+> Use the Virtual machine only when you want to compile the kernel, bootloader, or use the build root software i.e. busy box. However if you only want to write application for the beaglebone then just use the **eclipse** which is installed on your primary operating system such Windows, Mac etc. **You don't need to install Eclipse on the virtual machine for application development purpose**    
     
-The **eMMC** memory is actually connected to the **mmc1** interface and the **micro SD card** connector is connected to the **mmc0** interface of the AM335x SOC, And we also have 512 MB of **DDR** memory connected to the DDR interface of the SOC. 
 
- <img src="images/bbb_mmc_interface.png" alt="Table of your IP Address for your OS"> 
-    
-      
-> [!NOTE]
-> Remember, the board always tries to boot from the mmc1 interface first by default (eMMC Memory) when you power up the board. **However, we will take the help of Micro SD card to flash the eMMC memory** (flashing the bootable images and root file system onto the eMMC memory).   
-    
-1. Download the latest [Debian OS image](https://www.beagleboard.org/distros) (i.e. am335x-debian-11.7-iot-armhf-2023-09-02-4gb.img.xz). You can use `xz-utils` to extract `$ unxz am335x--.img.xz`      
-    
-2. Write that bootable image to the SD card using disk writing software [etcher](www.balena.io/etcher) by downloading the software on ubuntu. If it doesn't run by `$ ./balenaEtcher-1.18.11.AppImage` then make it executable by chmod +x. You might as well install `apt-get install fuse` if this package is missing.   
-    
-3. Insert the SD card into the beaglebone and then make beaglebone boot from the SD card (Power down BBB by long press of Power button, insert the SD card, keep pressing the S2 button while pressing the Power button gently and release the S2 button shortly, and you will see the LEDs of BBB blink linearly, probably take 5-10 mins).     
-   
-4. Execute the eMMC flasher script by logging into BBB via SSH `$ ssh -l debian 192.168.6.2` (used to be at `/opt/scripts/tools/eMMC` with the name `init-eMMC-flasher-v3.sh` but now you can simply run `sudo enable-beagle-flasher` to flash all the contents of the SD Card on to the eMMC memory) and finally reboot `sudo reboot` and BBB LEDs will blink linearly for awhile when it stopped then you can safely remove the SD Card.   
-     
-      
-> [!NOTE]    
-> If your board already running latest version of debian OS image, then you NEED NOT to try this.   
-> Check your BBB debian OS version `$ lsb_release -da` and compare the output with debian latest release. (You have to log into BBB by `minicom` if you aren't able to find the right `/dev/<PORT>` then use `$ dmesg` command)
-
-To configure BBB Network connection over USB, follow the Networking [guide](Docs/Networking.pdf) 
-   
-As disscussed in the Networking guide following commands has to be saved in the **BBB** and **Host** machine.   
-
-<img src="images/internetToTarget_BBB.png" alt="internetToTarget BBB">    
-
-<img src="images/internetToTarget_HOST.png" alt="internetToTarget Host">    
-
-
-## BBB Linux booting process                    
+# BBB Linux booting process                    
 
 Let's explore, How to boot the Linux kernel on the ARM based hardware such as Beaglebone Black target hardware which is powered by the SOC AM335x (ARM cortex A8 processor) from Texas Instruments.    
       
@@ -173,21 +139,126 @@ To run Linux on this embedded board, we need minimum of 4 software components as
       
 <img src="images/linux_boot_req.png" alt="Linux Boot Requirement">   
     
-**RBL (ROM Boot Loader)**     
+## RBL (ROM Boot Loader)     
     
-A very tiny boot loader with limited functionalities runs out of the ROM memory of the SOC when you power up the board. This boot loader is written by the vendor, in our case, written by the Texas Instruments, and stored in the ROM of the SOC during taping out of the chip. You cannot change this boot loader (cannot overwrite). You may also not get the source code of this boot loader. Primary job of the RBL is to load and execute the second stage boot loader **SPL/MLO** from the internal memory (_SRAM_) of the SOC.    
-     
-**SPL/MLO (Secondary Program Loader / Memory Loader)**   
-     
-The job of the Secondary stage boot loader is to load and execute the Third stage boot loader **U-boot** from the DDR memory of the board. 
+A very tiny boot loader with limited functionalities runs out of the ROM memory (176 Kb, another SOC internal RAM memory of 128 Kb) of the SOC when you power up the board. This boot loader is written by the vendor, in our case, written by the Texas Instruments, and stored in the ROM of the SOC during taping out of the chip. You cannot change this boot loader (cannot overwrite). You may also not get the source code of this boot loader. The job of the ROM is to set up the, Stack setup, calling `main()`, initialising watch dog timer (Initialised for 3 mins), and SOC PLLs clock 500 MHz to A8 by MPU_ADPLLS etc. Based on the value of 15:14 bits of the SYSBOOT register, the RBL comes to know about the value of the external crystal connected to the SOC (in our case 24MHz Crystal at the bottom of BBB with part name Y2. 14th bit SYS_BOOT14(LCD_DATA14) tied to high voltage and 15th pin SYS_BOOT15(LCD_DATA15) tied to low voltage as shown below). Finally to load and execute the second stage boot loader **SPL/MLO** from the internal memory (_SRAM_) of the SOC.   
     
-**U-boot**      
+<img src="images/rbl.png" alt="ROM Boot Loader">    
+     
+<img src="images/startup_procedure.png" alt="Startup procedure">      
+     
+<img src="images/pll.png" alt="DPLLs and clocks configurations">      
+     
+<img src="images/clock_config.png" alt="Clock configuration">        
+     
+<img src="images/rbl_summary.png" alt="RBL Summary">    
+     
+     
+## SPL/MLO (Secondary Program Loader / Memory Loader)   
+     
+The job of the Secondary stage boot loader is to initialise the SOC to a point that the Third stage boot loader **U-boot** can be loaded into external RAM (DDR memory) of the board.       
+     
+<img src="images/spl_summary.png" alt="SPL Summary">    
+     
+Suppose, if you want to clock your MPU at 300MHz instead of say 500MHz, you can only do that in the second stage boot loader (by reconfiguring the PLL) where you can bring down the clock frequency to 300MHz and vice versa   
+    
+RBL must load and execute the second stage boot loader within 3 minutes (Watchdog expiry)  Let's say, it finds the second stage boot loader on the e-MMC memory of the board. Then the ROM code copies the MLO/SPL to the internal RAM of the SOC.       
+     
+<img src="images/spl.png" alt="SPL copied into Internal RAM of the SOC">    
+     
+The MLO or SPL will have its own image header which is decided by TI itself. From the image header, it will get 2 important information. One is the load address and another one is the total size of the MLO.         
+     
+<img src="images/mlo_image_header.png" alt="MLO/SPL image header">    
+
+> [!NOTE] 
+> Remember that, MLO will not load the third stage boot loader like U-Boot to the internal RAM of the SOC. Why? Because, the internal RAM is only of 128KB. U-boot obviously will not fit there. So, it copies it to the DDR memory which is external to the SOC.    
+     
+<img src="images/rbl_to_uboot.png" alt="Can we avoid using MLO/SPL by making RBL load u-boot directly to SRAM">           
+     
+**Why AM335x RBL cannot load the Uboot directly to DDR?**   
+
+ROM code won’t be having any idea about what kind of DDR RAM being used in the product to initialize it. DDR RAM is purely product/ board specific. Let’s say there are 3 board/product manufacturing companies X,Y,Z. X may design a product using AM335x SOC with DDR3. In which lets say DDR3 RAM is produced by microchip. Y may design its product using AM335x SOC with DDR2 produced by Transcend and Z may not use DDR memory at all for its product.
+
+So, RBL has no idea in which product this chip will be used and what kind of DDR will be used, and what are DDR tuning parameters like speed, bandwidth, clock augments, size, etc. 
+
+RBL just tries to fetch the SPL found in memory devices such as eMMC and SD card or peripherals like UART,EMAC,etc.
+
+> [!NOTE] 
+> And in the SPL/MLO, you should know, what kind of DDR is connected to your product and based on that you have to change the SPL code , rebuild it and generate the binary to use it as the second stage boot loader.
+
+For example the Beaglebone black uses DDR3 from Kingston and if your product uses DDR3 from transcend, then if the turning parameters are different then you have to change the DDR related header files and the tuning parameter macros of the SPL , rebuild and generate the binary   
+    
+
+Now, let's see practically booting of the ROM bootloader and the MLO on the BeagleBone hardware. For that, first let's use the [pre-built binaries](prebuilt_images/Angstrom_Demo/) named MLO-beaglebone-2013.04.    
+     
+You need a micro SD card and partition (with Gparted, you can download GUI via Ubuntu Software center) card into two. One partition must be of type FAT filesystem (preferably with space of 1GB) and another partition should be of type EXT3. But, for the time being, we will not be using the
+
+> [!NOTE] 
+> Remember, never operate command line using root privileges. instead use `sudo` command   
+    
+<img src="images/partition.png" alt="Partitioning the SC card">           
+     
+Running `$ sudo dmesg` and check your SD card (which may identified by the PC as **sdb** device).   
+   
+Delete the /dev/sdb which will make it unalloacted. Keep first partition as **fat16**, New size as **1024 MB** and Label as **BOOT**    
+    
+Second partition as **ext3**, New size as whatever is remaining, and Label as **ROOTFS**  now apply the changes by clicking on Green color Tick.
+
+Lastly, Right click on **fat16** partition, select `Manage Flags > boot`   
+   
+Copy the MLO-beaglebone-2013.04 from the [pre-built binaries](prebuilt_images/Angstrom_Demo/) and paste it into BOOT partition by renaming it to _MLO_.     
+`$ cp MLO-beaglebone-2013.04 /media/<user-name>/BOOT/MLO     
+     
+Take out the SD card and insert it into BBB and connect both cables (one connect to BBB and another USB-TTL convertor to PC, USB-TLL needed as we cannot see the log messages as Internet over USB is not configured for BBB)     
+     
+<img src="images/mlo_boot.png" alt="Boot BBB with MLO from SD Card ">   
+
+It will boot the MLO however will encounter with an error as it could not find the u-boot **spl: error reading image u-boot.img, err - -1** which we will flash into BOOT partition in the next section     
+
+
+## U-boot      
     
 The job of the Third stage boot loader is to load and execute the Linux kernel from the DDR memory of the board. Hence the booting actually takes place in 3 stages.
 
-_And to complete the successful boot of the **Linux kernal**, we also need a root file system **RFS**_ 
+_And to complete the successful boot of the **Linux kernal**, we also need a root file system **RFS**_    
      
-      
+<img src="images/uboot_header.png" alt="U-boot image header">    
+     
+
+Now, let's see practically booting of the u-boot bootloader on the BeagleBone hardware. For that, first let's use the [pre-built binaries](prebuilt_images/Angstrom_Demo/) named `u-boot-beaglebone-2013.04-r0.img` and placed it into BOOT partition of SD card which was partitioned in the previous section. Now SD card BOOT paritioned drive (fat16) contain **MLO** and **u-boot.img**.     
+`$ cp u-boot-beaglebone-2013.04-r0.img /media/<user-name>/BOOT/u-boot.img    
+
+<img src="images/mlo_boot.png" alt="Boot BBB with MLO from SD Card ">    
+
+It will boot until the end where it couldn't find the Linux image as message says **File not found /boot/uImage**     
+   
+
+**MLO and u-boot.img summary**   
+<img src="images/mlo_uboot_summary.png" alt="MLO and u-boot.img summary">    
+
+<img src="images/u-boot_jobs.png" alt="The job of U-boot">    
+
+You should also provide one file called **uEnv.txt**, which consist of environmental variable values of the u-boot which directs u-boot how to behave. You can override any default u-boot behavior by using this file.        
+    
+<img src="images/uEnv.png" alt="uEnv file">    
+  
+Now u-boot always looks for uImage (zImage plus u-boot header). zImage is elf binary format of the Linux kernel and if you append the u-boot header to it, it becomes uImage. From the image header, u-boot gets lot of information about the Linux kernel.         
+    
+<img src="images/uimage.png" alt="uImage">    
+    
+<img src="images/uimage_header.png" alt="uImage header">        
+     
+Image header shown which u-boot expects on top of the zImage. This header is of 64 bytes in total. let's quickly download the [pre-built Linux image](prebuilt_images/Angstrom_Demo/) named `Angstrom-systemd-image-eglibc-ipk-v2012.12-beagleboard.rootfs.tar.xz`, extract and you will find **uImage-3.8.13** in **boot** folder which is pretty old Linux kernel. However we will copy all the extracted folders into our SD card **ROOTFS** partition.     
+`$ cp -r * /media/<user-name>/ROOTFS/`    
+`$ sync`    
+and we'll try to boot it. Then analyse the logs sent by the u-boot.
+
+Later, we will see how to create our own root file system using the Busybox, and by taking the help of Buildroot, that I will cover later in this course.   
+    
+Now you see the ROOTFS partition of the SD card consist of the root file system and u-boot.img (in BOOT partition) supposed to load the Linux kernel. But u-boot has no idea where exactly the Linux kernel is actually residing in the SD card. However the Linux kernel image is actually present in the `ROOTFS/boot` folder of the second partition. Hence we have to use uEnv.txt file to tell u-boot where exactly the Linux kernel is present.    
+
+    
+
 ## BeagleBone Board Boot options    
      
 you can boot the AM335x SOC from the following boot sources    
@@ -229,7 +300,7 @@ However, in the BBB, there are no such dip switches to configure the SYSBOOT pin
     
 ## BBB Boot order configuration circuit   
    
-In BBB you will find this circuitry, (In the [SRM](BBB_SRM.pdf))    
+In BBB you will find this circuitry, (In the [SRM](Docs/BBB_SRM.pdf))    
      
 <img src="images/boot_config_design.png" alt="Processor boot configuration design">   
      
@@ -238,13 +309,9 @@ Here observe that SYS_BOOT2 is connected to a button S2 (Boot button) of the BBB
 When you simply give power to the board, You will find the voltage level as below.
 
 SYS_BOOT0 = 0V
-
 SYS_BOOT1 = 0V
-
-SYS_BOOT2 =1V
-
+SYS_BOOT2 = 1V
 SYS_BOOT3 = 1V
-
 SYS_BOOT4 = 1V
 
 You can confirm this by measuring the voltage level using Mutlimeter (voltage of 45, 44, 43,41, 40 pins of the expansion header P8 of the board as SYSBOOT[4:0] = 11100)   
@@ -283,11 +350,11 @@ So, to conclude, there are 5 boot sources supported for this board including SPI
 
  If the default ( that is booting from eMMC) boot mode fails, then it will try to boot from the SD card you connected to the sd card connector at MMC0 interface. 
  
- If you press S2 and then apply the power, then the board will try to boot from the SPI first, and if nothing is connected to SPI, it will try to boot from the MMC0 where our SD card is found
+ If you press S2 and then apply the power, then the board will try to boot from the SPI first, and if nothing is connected to SPI, it will try to boot from the MMC0 where our SD card is found   
+ 
+ Also remember that we can use SD card boot to flash boot images on the eMMC. So if you want to write new images on the eMMC  then you can boot through sd card, then write new images to eMMC, then reset the board, so that your board can boot using new images stored in the eMMC.  We will do these experiments later in this course. Don’t worry!
 
-Also remember that we can use SD card boot to flash boot images on the eMMC. So if you want to write new images on the eMMC  then you can boot through sd card, then write new images to eMMC, then reset the board, so that your board can boot using new images stored in the eMMC.  We will do these experiments later in this course. Don’t worry!
-
-3) Serial boot :   
+3) Serial boot :
 
 In this mode, the ROM code of the SOC will try to download the boot images from the serial port.
 
@@ -313,7 +380,41 @@ Here, you can see that the ROM code goes through its boot device list to load th
     
 (page 4102)       
      
-<img src="images/startup_procedure.png " alt="Startup procedure">   
+<img src="images/startup_procedure.png" alt="Startup procedure">        
+
+
+# Updating the eMMC memory with the latest debian OS image and BBB Network configurations.   
+   
+We will flash eMMC of the Beaglebone board and then boot the Beagleboard using the eMMC memory (Revision C, onboard 4GB of eMMC memory) and the board already comes with pre-stored Debian OS, However we will reflash the Debian OS present on the eMMC memory of the board (for learning purposes and understand the working).    
+    
+The **eMMC** memory is actually connected to the **mmc1** interface and the **micro SD card** connector is connected to the **mmc0** interface of the AM335x SOC, And we also have 512 MB of **DDR** memory connected to the DDR interface of the SOC. 
+
+ <img src="images/bbb_mmc_interface.png" alt="Table of your IP Address for your OS"> 
+    
+      
+> [!NOTE]
+> Remember, the board always tries to boot from the mmc1 interface first by default (eMMC Memory) when you power up the board. **However, we will take the help of Micro SD card to flash the eMMC memory** (flashing the bootable images and root file system onto the eMMC memory).   
+    
+1. Download the latest [Debian OS image](https://www.beagleboard.org/distros) (i.e. am335x-debian-11.7-iot-armhf-2023-09-02-4gb.img.xz). You can use `xz-utils` to extract `$ unxz am335x--.img.xz`      
+    
+2. Write that bootable image to the SD card using disk writing software [etcher](www.balena.io/etcher) by downloading the software on ubuntu. If it doesn't run by `$ ./balenaEtcher-1.18.11.AppImage` then make it executable by chmod +x. You might as well install `apt-get install fuse` if this package is missing.   
+    
+3. Insert the SD card into the beaglebone and then make beaglebone boot from the SD card (Power down BBB by long press of Power button, insert the SD card, keep pressing the S2 button while pressing the Power button gently and release the S2 button shortly, and you will see the LEDs of BBB blink linearly, probably take 5-10 mins).     
+   
+4. Execute the eMMC flasher script by logging into BBB via SSH `$ ssh -l debian 192.168.6.2` (used to be at `/opt/scripts/tools/eMMC` with the name `init-eMMC-flasher-v3.sh` but now you can simply run `sudo enable-beagle-flasher` to flash all the contents of the SD Card on to the eMMC memory) and finally reboot `sudo reboot` and BBB LEDs will blink linearly for awhile when it stopped then you can safely remove the SD Card.   
+     
+      
+> [!NOTE]    
+> If your board already running latest version of debian OS image, then you NEED NOT to try this.   
+> Check your BBB debian OS version `$ lsb_release -da` and compare the output with debian latest release. (You have to log into BBB by `minicom` if you aren't able to find the right `/dev/<PORT>` then use `$ dmesg` command)
+
+To configure BBB Network connection over USB, follow the Networking [guide](Docs/Networking.pdf) 
+   
+As disscussed in the Networking guide following commands has to be saved in the **BBB** and **Host** machine.   
+
+<img src="images/internetToTarget_BBB.png" alt="internetToTarget BBB">    
+
+<img src="images/internetToTarget_HOST.png" alt="internetToTarget Host">    
          
 
 
