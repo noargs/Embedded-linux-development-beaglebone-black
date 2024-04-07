@@ -541,9 +541,132 @@ Another important assembly subroutine enable MMU which initializes the page tabl
     
 <img src="images/head_s_linux_kernal3.png" alt="head.S kernel startup entry point"> 
 
-Next a function called `start_kernel()` is called from the file **head-common.S** located in the same path **arch/arm/kernel**. Now from here the flow control comes to the file main.c of the Linux kernel.   
+Next it branches to `start_kernel()` (C function implemented in architecture independent generic file `main.c`) from **head-common.S** file located in the same path **arch/arm/kernel**. Now from here the flow control comes to the file `main.c` of the Linux kernel.   
+     
+<img src="images/head_s_linux_kernal4.png" alt="head.S kernel startup entry point">    
+     
+At this point, all the architecture dependent initialisations are over, your CPU ARM cortex- A8 is ready with the MMU support and Linux is all set to do architecture independent kernel initialisation (through `main.c`). And if you analyse the code of `head.S`, it's particularly interested in searching of CPU type like whether it belongs to ARM 9, ARM 10 or ARM cortex A8, etc. And once it comes to know about the architecture type, it majorly initialises the MMU and creates the initial page table entries and then enables the MMU of the processor for virtual memory support, before giving control to the main.c file of the Linux kernel which is the generic one.
+     
+**Launch of INIT**    
 
-<img src="images/head_s_linux_kernal4.png" alt="head.S kernel startup entry point">            
+The function `start_kernel()` in init main.c code does all the startup work for the Linux kernel from initialising the very first kernel thread, all the way to mounting a root file system and executing the very first user space Linux application program.
+
+The entry point into this main.c is `start_kernel()` function (in `linux-4.4/init/main.c`) which is a very huge function calling lots of other initialisation functions.   
+     
+<img src="images/start_kernel.png" alt="start_kernel() in linux/init/main.c">  		 
+
+Now take a look little further down at line _895_. Here the kernel prints the `linux_banner` string `pr_notice("%s", linux_banner)`, which you can identify in the log.   
+    
+<img src="images/log_linux.png" alt="Linux log">  		
+
+The `linux_banner` string can be found in the file `linux-4.4/init/version.c`
+
+Furthermore, `start_kernel()` does lots of early initialization of the Linux kernel such as:    
+    
+- Extracting the command line arguments sent by the boot loader     
+- Initialisation of the console to get the error messages    
+- Memory management initialization    
+- Scheduler initialization    
+- Timer initialization    
+- High resolution timer initialization    
+- Software IRQ initialization
+
+Hence, It initialises various subsystems of a Linux kernel before mounting the root file system and launching the very first Linux application. You can learn more by going through all these helper functions one by one inside `start_kernel()` and exploring what exactly they do.
+
+Finally, It calls a function called `rest_init()` and inside it creates two threads `kernel_init` (with pid 1) and `kthreadd`. It then starts scheduler `schedule_preempt_disabled()` and then kernel is going to **CPU idle loop** which is actually inifinite while(1) loop named `cpu_startup_entry(CPUHP_ONLINE)`.    
+    
+The `kernel_init` kernel thread will then execute the very first user application called init. That's the reason `init` application actually inherits its kernel threads pid number 1 from `kernel_init`. Whereas `kthreadd` kernel thread is used to spawn other kernel threads.   
+    
+```c
+/*
+	 * We need to spawn init first so that it obtains pid 1, however
+	 * the init task will end up wanting to create kthreads, which, if
+	 * we schedule it before we create kthreadd, will OOPS.
+	 */
+	pid = user_mode_thread(kernel_init, NULL, CLONE_FS);
+	/*
+	 * Pin init on the boot CPU. Task migration is not properly working
+	 * until sched_init_smp() has been run. It will set the allowed
+	 * CPUs for init to the non isolated CPUs.
+	 */
+	rcu_read_lock();
+	tsk = find_task_by_pid_ns(pid, &init_pid_ns);
+	tsk->flags |= PF_NO_SETAFFINITY;
+	set_cpus_allowed_ptr(tsk, cpumask_of(smp_processor_id()));
+	rcu_read_unlock();
+
+	numa_default_policy();
+	pid = kernel_thread(kthreadd, NULL, NULL, CLONE_FS | CLONE_FILES);
+	rcu_read_lock();
+	kthreadd_task = find_task_by_pid_ns(pid, &init_pid_ns);
+	rcu_read_unlock();
+```   
+    
+If we visit `kernel_init` function;  
+
+```c
+static int __ref kernel_init(void *unused)
+{
+	int ret;
+
+	/*
+	 * Wait until kthreadd is all set-up.
+	 */
+	wait_for_completion(&kthreadd_done);
+
+	kernel_init_freeable();
+	/* need to finish all async __init code before freeing the memory */
+	async_synchronize_full();
+
+	system_state = SYSTEM_FREEING_INITMEM;
+	kprobe_free_init_mem();
+	ftrace_free_init_mem();
+	kgdb_free_init_mem();
+	exit_boot_config();
+	free_initmem();
+	mark_readonly();
+
+	/*
+	 * Kernel mappings are now finalized - update the userspace page-table
+	 * to finalize PTI.
+	 */
+	pti_finalize();
+
+```				
+
+The function `free_initmem()` reclaims the memory which are being used by the initialisation function so far. Because, those functions are no longer needed. As log shows `Freeing init memory: 248K` which is reclaimed by the kernel.   
+    
+Further down it tries to run the init application and start from `/sbin/init` if it fails then it tries to find init from other location i.e. `/etc/init` and if everyting fails then it simply executes the shell application `/bin/sh` which is present in the root file system and just returns.
+
+ ```c
+ 	if (execute_command) {
+		ret = run_init_process(execute_command);
+		if (!ret)
+			return 0;
+		panic("Requested init %s failed (error %d).",
+		      execute_command, ret);
+	}
+	...
+
+	if (!try_to_run_init_process("/sbin/init") ||
+	    !try_to_run_init_process("/etc/init") ||
+	    !try_to_run_init_process("/bin/init") ||
+	    !try_to_run_init_process("/bin/sh"))
+		return 0;
+
+	panic("No working init found.  Try passing init= option to kernel. "
+	      "See Linux Documentation/admin-guide/init.rst for guidance.");
+}
+```    
+
+If none of these programs found in these location, then it actually throws an error `panic("No working init found.....)`
+
+And note that you can also mention the path of the init program `if (execute_command)` by using the Linux command line argument called init. You have to give the path of the init program, in case you have any customised or some other path. Then it first checks the `execute_command` first. That's how the Linux finally launches the user application.mEither it launches the init `/sbin/init` or if no init found then at least it will launch the shell application `/bin/sh`.
+
+That's how the control comes all the way from boot loaders `u-boot` to Linux bootstrap loader to linux kernel to launching of the very first application. And init is a application which is responsible for launching other applications. As we make a progress, we will experiment practically by creating our own root file system and keeping the init program and we'll see, how we can use the init program to launch other applications or other kernel services.   
+
+<img src="images/control_flow_linux_boot.png" alt="Control flow linux boot">  
+    				
 
 # Updating the eMMC memory with the latest debian OS image and BBB Network configurations.   
    
