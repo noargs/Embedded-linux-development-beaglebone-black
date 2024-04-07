@@ -305,7 +305,6 @@ iminfo - print header information for application image
 U-Boot# imi 0x82000000
 ```         
      
-
 ## BeagleBone Board Boot options    
      
 you can boot the AM335x SOC from the following boot sources    
@@ -508,9 +507,44 @@ It means, I have detected this machine ID and U-boot is passing that information
    
  <img src="images/calling_heads.png" alt="Kernel entry calling head.S">  
 
-This code actually calls the **Start** routine in the `head.s` file of the bootstrap loader.
+This code actually calls the **Start** routine in the `head.S` file of the bootstrap loader. which can be found in the [Linux source of Beaglebone board](https://github.com/beagleboard/linux) at location `$ vi arch/arm/boot/compressed/head.S` and look for `/start:`    
+     
+<img src="images/start_routine.png" alt="Start Routine">     
+
+If you go little further, you will find two lines of code where it is saving the architecture ID (machine id to `r7`) and the dtb address from `r2` (`kernel_entry(0, machid, r2)`) to `r8`.   
+Furthermore, `head.S` file of the bootstrap loader calls the `misc.c` to decompress the kernel (search `/decompress_kernel`) by branching `bl` to `misc.c`
+
+Now go to `misc.c` by typing `$ vi arch/arm/boot/compressed/misc.c` and search again for `/decompress_kernel`. Here you will find the function `void decompress_kernel()`    
     
+Next, the control from the `head.S` of **Linux's Boot Strap Loader** to another `head.S` of **Linux Kernel** which you can locate in `vi arch/arm/kernel/head.S`. This `head.S` is architecture specific code (doesn't depend upon any SOC family). It's a generic startup code for arm processors which does arm specific initialization as shown below.   
     
+<img src="images/head_s_linux_kernal.png" alt="Linux kernel's head.S responsibilities">     
+ 
+> [!NOTE]    
+> Remember that the uncompression and relocation of the Linux kernel image is not the responsibility of the U-Boot rather it is done by the **Linux's Boot Strap Loader** which is glued to the **Linux Kernel** image.    
+    
+If you read further about `vi arch/arm/kernel/head.S` it says the following. (MMU=off means no virtual addressing is enabled yet)    
+     
+<img src="images/head_s_linux_kernal2.png" alt="head.S kernel startup entry point">    
+
+Now let's explore some of the important sub routines called by this file.     
+    
+**Check for proper processor type**     
+     
+`__lookup_processor_type__` call will search for the processor architecture present on the board. After figuring out the processor type, it calls the appropriate processor specific initialization routinesmfound in the respective **processor specific files** in the path `arch/arm/mm/proc-*.S`.     
+   
+You will find in the `arch/arm/mm` directory that, every processor has its own processor specific initialization file. Basically the processor specific calls are made to deal with the memory management unit as explained here in these comments. _Perform a soft reset of the system. Put the CPU into the same state as it would be if it had been reset, and branch to what would be the reset vector_    
+    
+Also note that, the register r10 holds the processor info structure related to a processor which is detected by the call to `__lookup_processor_type__` previously as explained in the comment says that _on return, the CPU will be ready for the memory management unit to be turned on_, which confirms that all the processor specific calls are made to initialize the mmu before turning it on. It means, before giving control to the Linux generic code, mmu initialization and turning on of the MMU is important. That's the duty of these architecture specific codes.    
+    
+Another important assembly subroutine enable MMU which initializes the page table pointers and turn on the MMU, so that the kernel can start running with virtual address support.   
+    
+<img src="images/head_s_linux_kernal3.png" alt="head.S kernel startup entry point"> 
+
+Next a function called `start_kernel()` is called from the file **head-common.S** located in the same path **arch/arm/kernel**. Now from here the flow control comes to the file main.c of the Linux kernel.   
+
+<img src="images/head_s_linux_kernal4.png" alt="head.S kernel startup entry point">            
+
 # Updating the eMMC memory with the latest debian OS image and BBB Network configurations.   
    
 We will flash eMMC of the Beaglebone board and then boot the Beagleboard using the eMMC memory (Revision C, onboard 4GB of eMMC memory) and the board already comes with pre-stored Debian OS, However we will reflash the Debian OS present on the eMMC memory of the board (for learning purposes and understand the working).    
