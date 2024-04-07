@@ -253,11 +253,58 @@ Image header shown which u-boot expects on top of the zImage. This header is of 
 `$ sync`    
 and we'll try to boot it. Then analyse the logs sent by the u-boot.
 
-Later, we will see how to create our own root file system using the Busybox, and by taking the help of Buildroot, that I will cover later in this course.   
+Later, we will see how to create our own root file system using the Busybox, and by taking the help of Buildroot.   
     
-Now you see the ROOTFS partition of the SD card consist of the root file system and u-boot.img (in BOOT partition) supposed to load the Linux kernel. But u-boot has no idea where exactly the Linux kernel is actually residing in the SD card. However the Linux kernel image is actually present in the `ROOTFS/boot` folder of the second partition. Hence we have to use uEnv.txt file to tell u-boot where exactly the Linux kernel is present.    
+Now you see the ROOTFS partition of the SD card consist of the root file system and u-boot.img (in BOOT partition) supposed to load the Linux kernel. But u-boot has no idea where exactly the Linux kernel is actually residing in the SD card. However the Linux kernel image is actually present in the `ROOTFS/boot` folder of the second partition. Hence we have to use `uEnv.txt` file to tell u-boot where exactly the Linux kernel is present. Add `uEnv.txt` (with the content shown below) into _BOOT_ folder of **fat16** along with **MLO** and **u-boot.img**.   
+```
+console=ttyO0,115200n8
+ipaddr=192.168.7.2
+serverip=192.168.7.1
+loadaddr=0x82000000
+fdtaddr=0x88000000
+loadfromsd=load mmc 0:2 ${loadaddr} /boot/uImage;load mmc 0:2 ${fdtaddr} /boot/am335x-boneblack.dtb
+linuxbootargs=setenv bootargs console=${console} root=/dev/mmcblk0p2 rw
+uenvcmd=setenv autoload no; runloadfromsd; run linuxbootargs; bootm ${loadaddr} - ${fdtaddr}
+``` 
+We are instructing u-boot to keep the Linux kernel at `0x82000000` and dtb file at `0x88000000`. `runloadfromsd` is a custom name, you can give any of your liking.  
+    
+```
+$ umount /media/<user-name>/BOOT
+$ umount /media/<user-name>/ROOTFS
+$ sudo minicom
+```   
+Insert/Boot from the SC card   
+    
+<img src="images/uboot_boot_kernel.png" alt="uboot hands over control to linux kernel">   
 
+As shown above, uboot hands over control to Linux kernel          
+     
+**Reading U-boot header information of the uImage manually by using U-boot commands**   
+
+1. Load the uImage from Memory device (SD card/eMMC) in to the DDR memory of the board.   
+2. Use the memory dump command of U-boot to dump header information.  
     
+<img src="images/uboot_commands.png" alt="uboot commands">    
+
+```
+U-Boot# help load
+load - load binary file from a filesystem  
+
+# load uImage from 2nd partition into RAM (DDR) location 0x82000000
+U-Boot# load mmc 0:2 0x82000000 /boot/uImage   
+
+U-Boot# help md
+md - memory display
+
+# display 64 bytes header informtion starting from 0x82000000
+U-Boot# md 0x82000000 4
+
+U-Boot# help imi
+iminfo - print header information for application image
+
+U-Boot# imi 0x82000000
+```         
+     
 
 ## BeagleBone Board Boot options    
      
@@ -331,7 +378,9 @@ MMC0 (SD card)
 UART0
 USB0
 
-2. S2 pressed (SYSBOOT[4:0] = 11000) , The boot order will be
+2. S2 pressed (SYSBOOT[4:0] = 11000)   
+    
+The boot order will be
 
 SPI0
 MMC0 (SD card)
@@ -340,13 +389,13 @@ UART0
 
 So, to conclude, there are 5 boot sources supported for this board including SPI.    
      
-1) eMMC Boot(MMC1) :
+1) eMMC Boot(MMC1):
 
  eMMC is connected over MMC1 interface, This is the fastest boot mode possible, eMMC is right there on your board, so need not to purchase any external components or memory chip. This is the default boot mode. As soon as you reset the board, the board start booting from loading the images stored in the eMMC.   
  
  If no proper boot image is found in the eMMC, then Processor will automatically try to boot from the next device on the list. 
 
-2) SD Boot :
+2) SD Boot:
 
  If the default ( that is booting from eMMC) boot mode fails, then it will try to boot from the SD card you connected to the sd card connector at MMC0 interface. 
  
@@ -354,13 +403,13 @@ So, to conclude, there are 5 boot sources supported for this board including SPI
  
  Also remember that we can use SD card boot to flash boot images on the eMMC. So if you want to write new images on the eMMC  then you can boot through sd card, then write new images to eMMC, then reset the board, so that your board can boot using new images stored in the eMMC.  We will do these experiments later in this course. Don’t worry!
 
-3) Serial boot :
+3) Serial boot:
 
 In this mode, the ROM code of the SOC will try to download the boot images from the serial port.
 
 We have separate experiment on this boot mode and its very interesting. 
 
-4 ) USB BOOT :   
+4) USB BOOT:   
 
 You may be familiar with this boot mode, that is booting through usb stick!   
 
@@ -380,9 +429,88 @@ Here, you can see that the ROM code goes through its boot device list to load th
     
 (page 4102)       
      
-<img src="images/startup_procedure.png" alt="Startup procedure">        
+<img src="images/startup_procedure.png" alt="Startup procedure">     
 
 
+# Linux boot sequence   
+
+<img src="images/linux_boot_control_flow.png" alt="Control flow during Linux boot">    
+
+Take a look into the flow control diagram above, from **U-Boot** to **Linux** to launching of the very **first application** .
+
+1. **U-boot** hands off the control to the `head.s` file in the Boot strap loader of the Linux   
+2. Then, the `head.s` calls miscellaneous.c (`misc.c`) file. That also belongs to the **Linux's Bootstrap Loader** to uncompress the compressed image. 
+3. Then the control comes to another `head.s` file of the Linux kernel.    
+4. And from `head.s` file of the Linux kernel, the control comes to the `head-common.c`   
+5. And then on to `main.c` file of the Linux kernel,   
+6. Lastly, the first application of the Linux kernel that is `init` is launched.   
+     
+**How U-boot hands off control to the "Boot Strap Loader" of the Linux kernel??**  
+
+Let's explore from the source file `bootm.c` of the u-boot [source code](https://source.denx.de/u-boot/u-boot) OR [mirror](https://ftp.denx.de/pub/u-boot/).    
+
+`$ sudo nano arch/arm/lib/bootm.c`     
+    
+This is the code of the U-Boot which actually picks up Linux kernel from the memory and hands off the control to the Linux kernel. There is a function called `static void boot_jump_linux(struct bootm_headers *images, int flag)` takes two arguments, **bootm_headers** a structure and a flag.   
+    
+```c
+static void boot_jump_linux(struct bootm_headers *images, int flag)
+{
+#ifdef CONFIG_ARM64
+	...
+#ifdef CONFIG_ARMV8_PSCI
+		...
+#else
+	unsigned long machid = gd->bd->bi_arch_number;
+	char *s;
+	void (*kernel_entry)(int zero, int arch, uint params);
+	unsigned long r2;
+	int fake = (flag & BOOTM_STATE_OS_FAKE_GO);
+
+	kernel_entry = (void (*)(int, int, uint))images->ep;
+#ifdef CONFIG_CPU_V7M
+	...
+#endif
+	...
+```    
+    
+`kernel_entry` function pointer is actually initialized to `images->ep` that is an entry point (Linux entry point). You can find the field `ep` in the structure `bootm_headers` by `$ grep -r "bootm_headers" *` found in `include/image.h`   
+    
+```c
+#ifndef USE_HOSTCC
+	struct image_info	os;		/* os image info */
+	ulong		ep;		/* entry point of OS */
+
+	ulong		rd_start, rd_end;/* ramdisk start/end */
+
+	char		*ft_addr;	/* flat dev tree address */
+	ulong		ft_len;		/* length of flat device tree */
+
+	ulong		initrd_start;
+	ulong		initrd_end;
+	ulong		cmdline_start;
+	ulong		cmdline_end;
+	struct bd_info		*kbd;
+#endif
+```    
+    
+<img src="images/kernel_entry.png" alt="Kernel entery point">    
+    
+After that, this code is storing the value of `ft_addr` into the variable called `r2`. **ft_addr** is the RAM address at which the device tree binary is located. DTB or FTT, that is Flattened device tree is actually a binary which describes the various peripherals present on the board. That Binary Tree is needed by the Linux kernel during the boot.   
+    
+<img src="images/ft_addr.png" alt="Device tree binary">    
+    
+Next the U-Boot is dereferencing the kernel entry point `kernel_entry(0, machid, r2)` and sends three important arguments.   
+    
+<img src="images/kernel_entery_deref.png" alt="Kernel entry dereference">       
+    
+It means, I have detected this machine ID and U-boot is passing that information to the Linux kernel And 'r2' is where the ft address is stored. Hence when Linux comes to know about this machine ID, it will execute those initialization routines, which are required for this machine id. At this point the U-Boot is actually handing off control to the Linux kernel's bootstrap loader.   
+   
+ <img src="images/calling_heads.png" alt="Kernel entry calling head.S">  
+
+This code actually calls the **Start** routine in the `head.s` file of the bootstrap loader.
+    
+    
 # Updating the eMMC memory with the latest debian OS image and BBB Network configurations.   
    
 We will flash eMMC of the Beaglebone board and then boot the Beagleboard using the eMMC memory (Revision C, onboard 4GB of eMMC memory) and the board already comes with pre-stored Debian OS, However we will reflash the Debian OS present on the eMMC memory of the board (for learning purposes and understand the working).    
