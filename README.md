@@ -700,6 +700,49 @@ As disscussed in the Networking guide following commands has to be saved in the 
 <img src="images/internetToTarget_BBB.png" alt="internetToTarget BBB">    
 
 <img src="images/internetToTarget_HOST.png" alt="internetToTarget Host">    
+     
+
+# Linux Device Tree		 
+     
+This is also called as Flattened device tree.   
+
+Imagine, we have our own custom board (Beaglebone hardware or any other board with SOC as shown below) and it is based on ARM architecture and the board has got couple of on board peripherals like the Zigbee transceiver, Serial flash, EEPROM, SD card connector, USB interface etc and they are connected with some bus interfaces like USART, SPI, I2C, SDIO, USB, etc.	    
+
+<img src="images/custom_board.png" alt="Peripheral of our custom board">    
+     
+Now, interestingly the onboard peripherals are not dynamically discoverable which are connected to SPI, I2C, SDIO, Ethernet, etc., have no capability to announce there existence on the board by themselves to the operating system like Linux. Because, those interfaces (like I2C, SPI, SDIO, etc.) don't have that intelligence to support dynamic discoverability. Even though those peripherals are there on the board, the operating system has no idea about configuring them. On the other hand, When you connect a pen drive or thumb drive via USB to use the port, it has the intelligence to announce its presence to the operating system dynamically by pushing some information.
+
+Now the question is, how can we make Linux kernel know about these platform devices (**USB is not platform device as it is self-discoverable**) or peripherals present on the board or announce their existence to the kernel, since they cannot do it themselves.
+
+One solution was to go for a static way, to hard code these platform device details in a file called the board file (as shown below) and when the kernel calls the function `my_board_init()` add each and every platform device to the kernel subsystem with a platform specific data (i.e. data structure which actually describes the peripheral). As the Board file is basically the part of the Linux kernel, so when you modify to add new entries, you have to recompile the kernel. Then only your changes will take effect 
+   
+<img src="images/platform_devices.png" alt="Platform devices">    
+   
+When the corresponding driver is loaded, the Linux calls the "probe" function of the driver and the platform data will be passed to the driver and the driver will then initialize the peripheral.    
+    
+<img src="images/drivers.png" alt="Drivers">  		
+     
+For instance, let's say the name of the platform device zigbee is zigbee100. The corresponding driver name must also be same as the platform device name (zigbee100.ko). When you load this driver the Linux binds the device with this driver. So, Linux immediately calls the "probe" function of this driver and the driver will then take care of initializing the peripheral.   
+    
+<img src="images/zigbee100.png" alt="Zigbee drivers">     
+    
+When you have different boards, each board will have different on board peripherals. Hence for every board you'll be having one board file. Consequently for each board, you'll be having separate kernel image. Kernal image of one board will not be compatible with other boards.   
+    
+<img src="images/uimage_several_boards.png" alt="uimage for several boards">  		
+    
+**This was a problem which the Linux community wanted to solve.** They wanted to cutoff the dependency of platform device enumeration from the Linux kernel. That is hard coding of platform device specific details in to the Linux kernel. Hence the ARM community came up with the idea called **Device Tree** also called as **Flattened Device Tree Model**.    
+    
+In this case, instead of hard coding the hardware details into the Linux kernel board file, every board vendors has to come up with a file called DTS (Device Tree Source File or Device Tree Structure). This file actually consists of all the details related to the board written using some predefined syntaxes. This file consists of lots of data structures, which describe all the required peripherals of the board.   
+    
+<img src="images/dts.png" alt="DTS for every board">		
+    
+And this file will be compiled using a _Device Tree Compiler_ that we call **DTS**. This is one kind of the special compiler to convert this DTS file to the stream of bytes, we call this binary as **DTB**. So, the DTB is a stream of bytes contain encoded details of the hardware, which is derived from DTS compilation.    
+     
+<img src="images/dtb.png" alt="DTB">				 
+
+Hence there will be one DTB for every board and when you edit that DTS file to add a new entry. You need not to compile the kernel again and again, you just need to compile the DTS file and get the new DTB. Finally when the kernel boots, you should tell the kernel where this DTB resides in the memory, so that the Linux kernel can load that DTB file and extract all the hardware details of the board.     
+     
+<img src="images/dtb_to_load.png" alt="DTB to load by telling Linux kernel beforehand its location in memory">			 
          
 
 
