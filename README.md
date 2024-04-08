@@ -742,7 +742,55 @@ And this file will be compiled using a _Device Tree Compiler_ that we call **DTS
 
 Hence there will be one DTB for every board and when you edit that DTS file to add a new entry. You need not to compile the kernel again and again, you just need to compile the DTS file and get the new DTB. Finally when the kernel boots, you should tell the kernel where this DTB resides in the memory, so that the Linux kernel can load that DTB file and extract all the hardware details of the board.     
      
-<img src="images/dtb_to_load.png" alt="DTB to load by telling Linux kernel beforehand its location in memory">			 
+<img src="images/dtb_to_load.png" alt="DTB to load by telling Linux kernel beforehand its location in memory">			
+
+
+# uEnv.txt file   
+
+Open the minicom, reset the board. Board will boot from eMMC. **Now halt it at the U-Boot by pressing the Space key**. 
+
+Type the command `help` on the U-Boot command prompt and the U-Boot will list out all the commands which is supported by this version of the U-Boot.   
+    
+<img src="images/uboot_help.png" alt="uboot help command">		
+
+For example, if I want to know about how sleep works, I just have to type `U-Boot# help sleep` and it will give you the small documentation.
+
+The U-boot actually depends on the various environmental variables, which is used during the development of the U-Boot project. There is a command called `printenv` which shows you all the environmental variables along with its values (i.e. `U-Boot# printenv`). If you want to, for instance, know the environment variable `soc` then you can type `U-Boot# printenv soc`  
+    
+**Similar to linux environment variables, u-boot also has set of standard as well as user defined environmental variables which can be used to override or change the behaviour of the uboot**   
+
+You can add your own environmental variables (by `setenv`) and also change their values. For example to create an environmental variable `serverip` we type the following `U-Boot# setenv serverip 192.168.27.1`   
+    
+You can also store the multiple u-boot commands as a value in the env variables (i.e. `bootcmd`).		
+    
+You can even execute all the commands stored in the env variable in one go. Use the command `run name_of_env_variable`		
+
+**Let's create our own environmental variable which is having a command as a value**.   
+    
+Let's say `U-Boot# mmc rescan` which will scan for the MMC device and `U-Boot# mmc list` which list out all the supported mmc interfaces on your board (MMC0 and MMC1 is currently available which is connection to the SD card and MMC1 is a interface where our eMMC is connected).   
+    
+Create environmental variable by using the command `setenv`.    
+     
+```
+U-Boot# setenv my_mmc_list 'mmc list'
+U-Boot# printenv my_mmc_list
+my_mmc_list=mmc list
+U-Boot# run my_mmc_list
+OMAP SD/MMC: 0
+OMAP SD/MMC: 1
+```    
+    
+**uEnv.txt file is collections of various env variables which are initialised to number of uboot commands and primarily use to automate the command execution.**    
+    
+
+# Writing uEnv.txt file from scratch  
+    
+				
+
+
+
+
+ 		  
          
 
 
