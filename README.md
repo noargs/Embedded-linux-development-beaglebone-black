@@ -747,7 +747,7 @@ Hence there will be one DTB for every board and when you edit that DTS file to a
 
 # uEnv.txt file   
 
-Open the minicom, reset the board. Board will boot from eMMC. **Now halt it at the U-Boot by pressing the Space key**. 
+Open the minicom, reset the board. Board will boot from eMMC. **Now halt it at the U-Boot by keeping the Space key pressed and then press S3 (power button)**. 
 
 Type the command `help` on the U-Boot command prompt and the U-Boot will list out all the commands which is supported by this version of the U-Boot.   
     
@@ -782,10 +782,156 @@ OMAP SD/MMC: 1
     
 **uEnv.txt file is collections of various env variables which are initialised to number of uboot commands and primarily use to automate the command execution.**    
     
+Command `boot` will boot the linux kernel. Ultimately give you the login screen.	
 
-# Writing uEnv.txt file from scratch  
+**U-boot always try to read the uEnv.txt from the boot source, if uEnv.txt not found, it will use the default value of the env varaibles.**  
+**If you don't want u-boot to use default values, enforce new values using uEnv.txt**		
     
+<img src="images/load_cmd.png" alt="Load command">		
+    
+<img src="images/load_cmd2.png" alt="Load command">		
+
+Lets load the linux binary image `uImage` from the second partition of the on-board eMMC memory in to the DDR using `load` command as shown above, where **<interface>** as mmc, <dev[:part]> as 1:2 (dev is 1 and partition is 2), <addr> as 0x82000000, <filename> as /boot/uImage and size[bytes [pos]] we don't know so we ignore this. This will load the Kernel image into DDR memory at address 0x82000000 and we wil then **boot from memory** with `bootm`	(It will not boot the Kernal yet as to boot successfully we also need to provide the dtb file which Boot Stap Load couldn't find)  
+     
+```
+U-Boot# load mmc 1:2 0x82000000 /boot/uImage
+4385024 bytes read in 749 ms (5.6 MiB/s)
+
+U-Boot# bootm 0x82000000
+```		
+     
+> [!INFO]  
+> **MMC1 interface** -> eMMC (Interface(dev) number 1)	
+> **MMC0 interface** -> MicroSD (Interface(dev) number 0)		
+
+**This time we will boot with the dtb file**
+
+```
+U-Boot# load mmc 1:2 0x82000000 /boot/uImage
+U-Boot# load mmc 1:2 0x88000000 /boot/am335x-boneblack.dtb
+U-Boot# bootm 0x82000000 - 0x88000000
+```		
+    
+We will NOT see the logs, confirming either boot was successfull or not **As the kernel has no idea, which serial port of the board is used for sending the boot logs.**  
+**The BBB uses UART0 as the serial debug terminal, which is enumerated as /dev/ttyO0 by the serial driver.**		
+      
+Therefore you have to pass some arguments that we call as Boot arguments (i.e. `U-Boot# printenv bootargs` if not found yu have to create the `bootargs`) from U-Boot to Linux kernel, instructing it to print all your debug messages on to the console ttyS2, ttyO0 (UART0 is enumurated as ttyO0) or ttyusb, etc.		
+
+Since `bootargs` are not defined hence we need to define it first and once again follow the process of loading uImage, dtb and bootm (booting from memory DDR):  
+
+```
+U-Boot# setenv bootargs console=ttyO0,115200
+U-Boot# load mmc 1:2 0x82000000 /boot/uImage
+U-Boot# load mmc 1:2 0x88000000 /boot/am335x-boneblack.dtb
+U-Boot# bootm 0x82000000 - 0x88000000
+```    
+     
+**The boot will failed again as linux has no idea from exactly it should mount the filesystem. Therefore you have to send the location and type of file system using `bootargs`. Let's mount the file system which is present at the partition 2 of the MicoSD card**  
+    
+<img src="images/mmcblk0p2.png" alt="File system">				
+
+```
+U-Boot# setenv bootargs console=ttyO0,115200 root=/dev/mmcblk0p2 rw
+U-Boot# load mmc 1:2 0x82000000 /boot/uImage
+U-Boot# load mmc 1:2 0x88000000 /boot/am335x-boneblack.dtb
+U-Boot# bootm 0x82000000 - 0x88000000
+```    		 
+
+You have now successfully booted and login with username `root` and password none
+      
+
+# Writing uEnv.txt file from scratch    
+    
+We will automate the steps done in previous section by creating a file called `uEnv.txt`.   
+We go into U-Boot once again by pressing the Space key and powering up the board by pressing the S3 button.   
+
+We have to download the uEnv.txt file which we will write and tranfer (using some Transfer protocol x-modem, minicom also provies you with lots of protocol like x-modem, y-modem, z-modem etc) from our PC to the board using commands like loadx, loady and loadz	   
+
+<img src="images/serial_port_protocol_cmd.png" alt="Serial port transfer protocol commands">		
+
+> [!NOTE]
+> Type `loady` in the U-Boot prompt and then press `Ctrl+A` once and then type 's' select `ymodem` (as we are using `loady` command), hit **double** Space to tap into the directory where `uEnv.txt` file is located and finally **single** Space to select the `uEnv.txt` file. **Any environment variable in the uEnv.txt file end with carriage return i.e. hit enter at the end of any environment variable for uEnv.txt to work properly**    
+
+`loady` command will only download the uEnv.txt file. To import the environmental variables into U-Boot shell you have to type `U-Boot# env import -t <memory addr> <size in bytes>` and we will create one custom command `mypcip` in uEnv.txt followed by carraige return as **mypcip=setenv serverip 192.168.1.2**   
+     
+```
+U-Boot# env import -t 0x80200000 38
+U-Boot# run mypcip
+U-Boot# printenv mypcip
+```		 
+    
+Write another command **ipaddr=192.168.27.1** in uEnv.txt file and test it by downloading with `loady` command into U-Boot and importing as follows:  
+     
+```
+U-Boot# env import -t 0x80200000 56
+U-Boot# run ipaddr
+U-Boot# printenv ipaddr
+```	
+
+As when we run `boot` command in the `U-Boot` shell it runs `bootcmd` in turn. Therefore we will create one `bootcmd` in the uEnv.txt file along with `bootargs` as follows:    
+
+```
+bootargs=console=ttyO0,115200 root=/dev/mmcblk0p2 rw
+bootcmd=echo"************Booting from memory*************;load mmc 1:2 0x82000000 /boot/uImage;load mmc 1:2 0x88000000 /boot/am335x-boneblack.dtb;bootm 0x82000000 - 0x88000000;
+```
+
+And once again download the uEnv.txt file and import it in U-Boot shell as follows:    
+
+```
+U-Boot# env import -t 0x80200000 290
+U-Boot# printenv bootargs
+U-Boot# printenv                 # There you will find `bootcmd`
+U-Boot# boot
+```											
 				
+
+# Booting BBB over Serial port    
+
+1. Don’t connect SD card to SD card connector of the BBB      
+     
+2. The board preferably powered using power adapter (recommended , watch next video to understand why )      
+    
+3. Use USB to TTL Serial converter hardware to connect BBB's UART0 serial pins to PC.	    
+
+<img src="images/serial_boot.png" alt="Serial boot">	   
+
+In the case of transfering boot images to the board over UART, we should use some protocols which can be Xmodem, Ymodem or Zmodem (These protocols can be used to transfer files from one device to another device over the serial port.)		 		  
+
+<img src="images/protocol_for_serial_port.png" alt="Protocol for serial port">	  
+
+<img src="images/pc_to_host_over_uart.png" alt="PC to host connection over UART">		   
+
+We'll be using RAM based file system initRAMFS which is actually a CPIO archive of the root file system.		
+
+**How Serial booting work?**    
+
+First we have to make our board boots via UART peripheral.   
+
+We have to boot exactly the same way how we used to boot via SD card, that is **press and hold the S2 button, then press and release the S3 button, and make sure that SD card is NOT inserted to the board**    
+
+<img src="images/boot_uart_steps.png" alt="Boot steps for UART when S2 pressed">		
+
+> [!NOTE]  
+> As you can see on the above image as why we cannot use USB P4 connection with the BBB to PC as USB0 comes before UART0. Hence we need to power up the Board with External adapter. 		
+
+<img src="images/errata_note.png" alt="Errata note">		 	 
+
+> [!NOTE]   
+> When you search for the Errata note then you will find that the system is delayed for up to 4.5 minutes before continuing to the next boot device, if an attempt to boot from the Ethernet fails for any reason and this applies to the USB boot (if it detects the USB cable and it couldn't obtain the boot images from the USB, then the chip will wait for 4.5 minutes)     
+     
+<img src="images/boot_sequence.png" alt="Boot sequence">	  
+
+Go to TRM document of AM335x SOC under _26.1.8 Peripheral Booting_ section it says it can be booted either through EMAC, Ethernet using TFTP protocol, USB as well as USB. And under _26.1.8.5 UART Boot Procedure_ section it states the boot ROM code uses Xmodem client protocol to receive the boot images. **When you keep the board into UART boot mode, the ROM boot loader is waiting for the second stage boot loader that is the SPL image over xmodem protocol only. Once the SPL executes it also tries to get the third stage boot loader that uboot image over xmodem protocol and you should send the uboot image over xmodem protocol from the host**. Utilities like hyperterm, terateram, minicom can be used on the PC side to download the boot image to the board.		 
+     
+<img src="images/uart_boot_procedure.png" alt="UART boot procedure">		 
+     
+When u-boot executes you can use u-boot commands such as xmodem or ymodem to load rest of the images like linux kernel image, DTB, initramfs in to the DDR memory of the board at recommend addresses (as shown below).    
+
+<img src="images/summary_uart_booting.png" alt="Summar of UART booting procedure">		  
+
+
+    
+
 
 
 
