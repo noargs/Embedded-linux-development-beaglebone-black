@@ -800,7 +800,7 @@ U-Boot# load mmc 1:2 0x82000000 /boot/uImage
 U-Boot# bootm 0x82000000
 ```		
      
-> [!INFO]  
+> [!INFO]     
 > **MMC1 interface** -> eMMC (Interface(dev) number 1)	
 > **MMC0 interface** -> MicroSD (Interface(dev) number 0)		
 
@@ -927,6 +927,8 @@ Go to TRM document of AM335x SOC under _26.1.8 Peripheral Booting_ section it sa
      
 When u-boot executes you can use u-boot commands such as xmodem or ymodem to load rest of the images like linux kernel image, DTB, initramfs in to the DDR memory of the board at recommend addresses (as shown below).    
 
+<img src="images/recommended_addresses.png" alt="Recommended Load Addresses">
+
 <img src="images/summary_uart_booting.png" alt="Summar of UART booting procedure">	  
 
 > [!IMPORTANT]      
@@ -934,7 +936,7 @@ When u-boot executes you can use u-boot commands such as xmodem or ymodem to loa
 
 ## initramfs   
 
- The word "initramfs" is made up of three words "initial" "RAM based" "file system"
+The word "initramfs" is made up of three words "initial" "RAM based" "file system"
 
 This is a file system hierarchy, made to live in the RAM of the device by compressing it (we use compression because RAM is precious, we cannot use whole RAM just to store the FS) and during booting, Linux mounts this file system as the initial file system.  That means you just need RAM to mount the FS and get going with the complete boot Process. 			
 
@@ -1012,8 +1014,147 @@ Run the below command.
 
 <img src="images/step4_initramfs.png" alt="initrafs.gz">	   
 
-Great now you will end up with a file **initramfs** which also includes the **uboot header** and this file we will be used as ram based file system whenever required. 		 	 	 	 
+Great now you will end up with a file **initramfs** which also includes the **uboot header** and this file we will be used as ram based file system whenever required. 		 
+       
+			  
+## Testing Serial Boot   
+
+<img src="images/testing_serial_boot.png" alt="Testing serial boot">	 
+
+We will download all the above images through UART. Now, open the minicom and **put the board in to UART boot mode by pressing and hodling the boot button (S2) and then press and release the power button (S3). make sure nothing is connected on the P4 USB and rather user 5V power supply as well as UART connection**   
+     
+> [!NOTE]   
+> The characters `CCCCCCCC` will be emitted by ROM code of the SOC as soon it goes to UART boot mode(indicating it's waiting to grab the SPL via the UART. if you don't see characters `CCCCCC`, then the board is not in to UART boot mode.)		 
+     
+**1. Send u-boot-spl.bin**		 
+Let's transfer first boot image i.e. SPL also called as Second Stage boot loader i.e. xmodem, ymodem, zmodem, kermit
+
+To invoke x/y/zmodem from minicom press the `Ctrl+A` then `s` and then keep the cursor in front of the folder you wish to enter and then press Space key twice. Now keep cursor on `u-boot-spl.bin` press the space key to select and press enter. Look for `u-boot-spl.bin` in the repository [pre-built-images/serial-boot](prebuilt_images/serial-boot)   
     
+> [!INFO]     
+> If any stage of the UART transfer timeout occurs then put it back into UART boot mode by pressing the boot (S2) button and then Power button (S3).			
+
+**2. Send u-boot.img**				
+
+Similarly follow the same steps as above to send the `u-boot.img` at [pre-built-images/serial-boot](prebuilt_images/serial-boot) directory through minicom  over UART however choose zmodem if x and y doesn't work.  
+    
+Now press the SPACR bar to halt at U-Boot, Now let's download the Linux image. You can use the U-Boot (loadx command) to download the Linux image from your host PC into the beaglebone hardware again by using xmodem or ymodem protocol. Following is the recommended addresses at which we have to download the kernel image    
+     
+<img src="images/recommended_addresses.png" alt="Recommended Load Addresses">	   
+      
+**3. Send uImage**    
+     
+```
+=> loadx 0x82000000   
+```	 	 
+    
+Using loadx (via xmodem) download the binary image (kernel image) or any file using x-modem protocol at the location `0x82000000` on the DDR (that means if you cut off the power of the board then image will be vanished and you have to startover from step 1 i.e. Send u-boot-spl.bin)    
+
+Now repeat the same steps of pressing the `Ctrl+A` then `s` and so on, finally choose the `uImage` file from [pre-built-images/serial-boot](prebuilt_images/serial-boot) directory.     
+      
+**4. Send DTB**    
+     
+```
+=> loadx 0x88000000   
+```	    
+
+`Ctrl+A` then `s` and so on, finally choose the DTB file `am335x-boneblack.dtb` from [pre-built-images/serial-boot](prebuilt_images/serial-boot) directory. 		 
+      
+**5. Send initramfs**    
+     
+```
+=> loadx 0x88080000   
+```	    
+
+`Ctrl+A` then `s` and so on, finally choose the file `initramfs` from [pre-built-images/serial-boot](prebuilt_images/serial-boot) directory. 		 
+    
+So far we sent 5 files into the BeagleBone Board as shown below   
+
+<img src="images/5files_into_bbb.png" alt="Trasnfered files into BBB so far">			       
+    
+**So, we downloaded the `u-boot-spl.bin` into the internal RAM of the SOC. But, we downloaded all the remaining files into the DDR memory of the board using the xmodem protocol**    
+
+**6 boot the linux kernel**		  
+     
+Let's boot the Linux kernel however before booting, you have to tell the Linux kernel that we are using RAM based file system which is sitting at `0x88080000` location. Otherwise, the booting will not succeed because it will result in a kernel panic saying that it couldn't mount any file system, because Linux will try to mount the file system, whether it could be on NAND Flash, USB, or on the network based file system, so whatever.
+
+Following boot arguments to tell the kernel to take the file system from the RAM based file system which is sitting at `0x88080000`    
+    
+<img src="images/linux_boot_args.png" alt="Linux boot args">			
+<img src="images/bootm_linux_kernel.png" alt="Bootm linux kernel">		
+     
+```
+=> setenv bootargs console=ttyO0,115200 root=/dev/ram0 rw initrd=0x88080000
+=> bootm 0x82000000 0x88080000 0x88000000
+```    
+    
+The Linux has booted successfully and you will see the login prompt (log in with username `root`) has come up and the logo appears, TI guys who created this file system for AM335x ebm    
+    
+<img src="images/ti_fs.png" alt="TI filesystem">			
+
+OK?
+
+So, that is by TI.
+
+So, we are seeing this because, we used a ready made file system give by the TI, isn't it?
+
+So, TI might have created that file system for their board.
+
+So, we just used that on our board. That's
+
+? OK? So, now you have 2 challenges
+
+OK?
+
+After this, right after this lecture, the first challenge is you have to change this login name
+
+with a custom name such as your name hyphen your board name ,OK? You have to change this login.
+
+So, where do you change this login name?
+
+You already have the root file system given by the TI, isn't it?
+
+which we used for this experiment.
+
+So, in that file system, you have to change some file.
+
+OK?
+
+You need not to code anything, you just have to change some file contents in which they have written
+
+this login name.
+
+You replace this login name with your custom name like your name hyphen board.
+
+OK?
+
+So, then again create the initramfs and repeat this procedure, so that you can see your custom
+
+login here.
+
+OK? So, nothing will change, just the login name will change.
+
+So, that's your first challenge and if possible try to change this logo also.
+
+OK.
+
+Use your custom logo, like your name or your pet name or whatever.
+
+All right?
+
+Great.
+
+So, you can just login to this beaglebone now by typing root. OK? Just type root.
+
+So, you will login into the beaglebone black hardware.
+
+Great.
+
+So, in this lecture, we successfully booted our beaglebone black hardware through UART.
+
+And I'll see you in the next lecture which is booting your board using TFTP protocol, that's a network
+
+booting.
 
 
 
