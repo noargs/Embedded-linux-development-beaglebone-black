@@ -1090,7 +1090,38 @@ Following boot arguments to tell the kernel to take the file system from the RAM
     
 The Linux has booted successfully and you will see the login prompt (log in with username `root`) has come up and the logo appears, TI guys who created this file system for AM335x ebm    
     
-<img src="images/ti_fs.png" alt="TI filesystem">			
+<img src="images/ti_fs.png" alt="TI filesystem">		
+
+
+# Booting BBB over TFTP protocol    
+       
+1. Power the board using either connecting to PC via USB cable or using DC adapter.     
+2. Connect Ethernet port of the BBB hardware to PC's Ethernet port using Ethernet cable.     
+3. We will also use SD card for this experiment.	   
+      
+TFTP stands for **Trivial File Transfer Protocol**, which can be used to transfer files between a TFTP server and a TFTP client.     
+      
+<img src="images/tft_server_client.png" alt="TFT Server Client">					
+     
+We will be connecting our Board (TFTP Client) to the Host PC (Ubuntu, TFTP Host) via the Ethernet cable.     
+      
+<img src="images/file_placement.png" alt="TFT Server Client">					
+                 
+In our boot scenario (as shown above), the Linux kernel image `uImage`, the `initramfs` and the Device tree binary `am335x-boneblack.dtb` will be present on the **Linux Host PC** at `/var/lib/tftpboot`. And we will keep the Second stage boot loader `SPL`, `u-boot.img`, and `uEnv.txt` file in the **SD card**.      
+      
+The idea here is that;    
+     
+- First we boot the board via the SD card. Hence, the ROM code first fetches the SPL present on the SD card      
+- And SPL in turn fetches and executes the U-Boot present on the SD card.       
+- Then we will use U-Boot to fetch the Linux kernel `uImage`, `dtb` and the `initramfs` present on the TFTP server and place it on the DDR memory of the board at different memory addresses.     
+- And after that, we will ask U-Boot to boot from address where the Linux kernel is present.
+
+The reason why we use U-Boot is, it supports TFTP protocol and the TFTP commands. By using TFTP commands of the U-Boot, we can fetch any file from the TFTP server and place it on the DDR memory of the board. Now to automate all these file transfers from the TFTP server, we should write all the commands in the uEnv.txt file.   
+      
+<img src="images/workflow_tftp_protocol.png" alt="TFT protocol workflow">					
+
+
+				 					 	
 
 
 
