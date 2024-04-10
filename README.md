@@ -1184,8 +1184,6 @@ Now you can log in with the username `root`
 - During your development if you keep changing your boot binaries or file sytem, then **tftpboot** procedure will save lots of time related to transfer of those image files to the board for testing (You change something on kernel or root file system then recompile and then store somewhere probably on SD card, NAND Flash, or eMMC then you will boot, that is a tedious process, Hence **tftpboot will save you alot of time**)   
       
 - You can automate tftpboot using uboot's uEnv.txt, that we will take up next    
-       
-<img src="images/summary_tftpboot.png" alt="Summary">		
      
 Below you can see the terminals of the Host PC as well as BBB.     
 
@@ -1212,108 +1210,7 @@ If at the BeagleBone side it says	`Network is unreachable` then you might as wel
 
 TFTP boot is a very handy way of booting when you need to recompile your kernel repeatedly and inserting removing the SD card from the board is a tedious process
 
-       
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-For that, just type tftp -r, the final name that is,
-
-helloworld
-
--g and the server IP. OK?
-
-That is 192.168.27.1
-
-OK? So, here -r means
-
-remote file.
-
-OK?
-
-The remote filename.
-
-OK ? that is the helloworld. We just copied, we just created that in the host PC.
-
-And this is the server IP.
-
-OK?
-
-And just type Enter, here the command is wrong.
-
-tftp, OK?
-
-And then just type Enter.
-
-OK?
-
-So, here it is saying that the network is unreachable.
-
-So, just do ifconfig, it's to see your network is really configured or not.
-
-No. There is no IP address has been set up, so let's do that. ifconfig eth0 what is the client IP address?
-
-192.168.27.2
-
-isn't it?
-
-So, lets ping to our server, that is 192.168.27.1
-
-So, it is pinging right? Great.
-
-So, press control-C to terminate that.
-
-Okay? Great.
-
-So, now let's run the tftp once again.
-
-So, this is the command, right? Now,
-
-press Enter.
-
-OK? So, the command ran successfully. Just do ls
-
-Here you can see, we pulled the file from the host PC to the hardware.
-
-We just do a cat helloworld, you can see, this is what we actually wrote in our file over here.
-
-Great.
-
-That is how you can use TFTP to download files from your host PC to your embedded board.
-
-As I said, tftp boot is a very handy way of booting when you need to recompile your kernel repeatedly
-
-and inserting and removing the SD card from the board is a tedious process. Isn't it?
-
-So, in those cases, tftp boot is really helpful.
-
-So, now there are couple of challenges for you right after this video and try to complete that.						
+       					
 
 
 
