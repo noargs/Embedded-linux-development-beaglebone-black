@@ -1116,12 +1116,204 @@ The idea here is that;
 - Then we will use U-Boot to fetch the Linux kernel `uImage`, `dtb` and the `initramfs` present on the TFTP server and place it on the DDR memory of the board at different memory addresses.     
 - And after that, we will ask U-Boot to boot from address where the Linux kernel is present.
 
-The reason why we use U-Boot is, it supports TFTP protocol and the TFTP commands. By using TFTP commands of the U-Boot, we can fetch any file from the TFTP server and place it on the DDR memory of the board. Now to automate all these file transfers from the TFTP server, we should write all the commands in the uEnv.txt file.   
+The reason why we use U-Boot is, it supports TFTP protocol and the TFTP commands. By using TFTP commands of the U-Boot, we can fetch any file from the TFTP server and place it on the DDR memory of the board. **Now to automate all these file transfers from the TFTP server, we should write all the commands in the uEnv.txt file**.   
       
-<img src="images/workflow_tftp_protocol.png" alt="TFT protocol workflow">					
+<img src="images/workflow_tftp_protocol.png" alt="TFT protocol workflow">		   
+               
+<img src="images/summary_tftpboot.png" alt="Summary">						
+      
+
+**Preparing TFTP host, Setting up a TFTP server on Ubuntu host**     
+      
+- **Step 1**:  First on your Ubuntu host run the below command using your terminal program. Which will install the tftpd , xinetd(eXtended InterNET Daemon) . **tftpd** is a server for the Trivial File Transfer Protocol.    
+`$ sudo apt-get install xinetd tftp tftpd`    
+     
+- **Step 2**: Create/Open the file “tftp” in the below directory `$ sudo vi /etc/xinetd.d/tftp` and put the below entry in to this file  and save it     
+          
+```
+service tftp
+{
+protocol = udp
+port = 69
+socket_type = dgram
+wait = yes
+user = nobody
+server = /usr/sbin/in.tftpd
+server_args = /var/lib/tftpboot -s
+disable = no
+}
+```    
+
+- **Step3**: Create a folder `/var/lib/tftpboot` and execute below commands     
+      
+```			
+$ sudo mkdir /var/lib/tftpboot
+$ sudo chmod -R 777 /var/lib/tftpboot
+$ sudo chown -R nobody /var/lib/tftpboot
+```       
+      
+- **Step 4**: Restart the xinetd service. Now the xinetd daemon is running `$ sudo /etc/init.d/xinetd restart`		 
+
+As previously said our PC is a TFTP server and Board is TFTP client, and make sure if the PC IP is set properly or not. Hence run ifconfig and if the Ethernet port name doesn't have `192.168.27.1` then you can create with `$ sudo ifconfig <port-name i.e. enp1s0>	192.168.27.1`	    
+            
+Now, go to our board and run the minicom `$ sudo minicom` and reset the board by pressing the power button (S3) and release and then press Enter to stop the auto booting. (We just want to boot from the eMMC. As we already have our MLO, U-Boot and the Kernel image there)      
+       
+Now, configure the `serverip` and `ipaddr` environment variables of the U-Boot with the proper value.		
+
+```
+=> setenv serverip 192.168.27.1
+=> setenv ipaddr 192.168.27.2          # bbb ip address
+=> ping 192.168.27.1
+```		  
+
+Now, use the TFTP command (i.e. `tftpboot`) to get the binary images. As we are already in the U-Boot. Hence we need not to load SPL and U-boot once again. Now our job is to load the Linux kernel image `uImage`, the device tree binary  `am335x-boneblack.dtb` and the `initramfs`.    
+     
+```
+=> tftpboot 0x82000000 uImage
+=> tftpboot 0x88000000 am335x-boneblack.dtb
+=> tftpboot 0x88080000 initramfs
+=> setenv bootargs console=ttyO0,115200 root=/dev/ram0 rw initrd=0x88080000
+=> bootm 0x82000000 0x88080000 0x88000000
+```		 
+Now you can log in with the username `root`   
+    
+**Advantage of using TFTP boot**    
+
+- Faster transfer of files from HOST PC to Development board (i.e. BBB)    
+       
+- During your development if you keep changing your boot binaries or file sytem, then **tftpboot** procedure will save lots of time related to transfer of those image files to the board for testing (You change something on kernel or root file system then recompile and then store somewhere probably on SD card, NAND Flash, or eMMC then you will boot, that is a tedious process, Hence **tftpboot will save you alot of time**)   
+      
+- You can automate tftpboot using uboot's uEnv.txt, that we will take up next    
+       
+<img src="images/summary_tftpboot.png" alt="Summary">		
+     
+Below you can see the terminals of the Host PC as well as BBB.     
+
+<img src="images/pc_host_tftpboot.png" alt="PC Host Tftpboot">	   		 
+
+Now, by using TFTP protocol you can transfer any file from a host PC to your beaglebone hardware. For example, let's create the file `helloworld` in the working directory (`BBB_workspace/prebuilt_images/tftp-boot`).  
+     
+> [!NOTE]
+> Remember, whatever file you want to transfer, you have to keep in the folder `/var/lib/tftpboot/`. Because, the TFTP protocol will always look only for this folder from the host PC.		 
+     
+```
+$ cd BBB_workspace/prebuilt_images/tftp-boot
+$ echo "Hello, there world!" > helloworld
+$ sudo cp helloworld /var/lib/tftpboot/
+```		 
+
+Now, let's go to our BeagleBone hardware. So, now here by using TFTP command you can pull the `helloworld` file from the Host PC (as shown below) `-r` means remote file.
+
+<img src="images/bbb_hardware.png" alt="BBB hardware">	 
+
+If at the BeagleBone side it says	`Network is unreachable` then you might as well configure the ip address for Ethernet port by first making sure with `ifconfig` and then setting it up with `$ ifconfig eth0 192.168.27.2`	 
+     
+**TFTP boot Conclusion**      
+
+TFTP boot is a very handy way of booting when you need to recompile your kernel repeatedly and inserting removing the SD card from the board is a tedious process
+
+       
 
 
-				 					 	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+For that, just type tftp -r, the final name that is,
+
+helloworld
+
+-g and the server IP. OK?
+
+That is 192.168.27.1
+
+OK? So, here -r means
+
+remote file.
+
+OK?
+
+The remote filename.
+
+OK ? that is the helloworld. We just copied, we just created that in the host PC.
+
+And this is the server IP.
+
+OK?
+
+And just type Enter, here the command is wrong.
+
+tftp, OK?
+
+And then just type Enter.
+
+OK?
+
+So, here it is saying that the network is unreachable.
+
+So, just do ifconfig, it's to see your network is really configured or not.
+
+No. There is no IP address has been set up, so let's do that. ifconfig eth0 what is the client IP address?
+
+192.168.27.2
+
+isn't it?
+
+So, lets ping to our server, that is 192.168.27.1
+
+So, it is pinging right? Great.
+
+So, press control-C to terminate that.
+
+Okay? Great.
+
+So, now let's run the tftp once again.
+
+So, this is the command, right? Now,
+
+press Enter.
+
+OK? So, the command ran successfully. Just do ls
+
+Here you can see, we pulled the file from the host PC to the hardware.
+
+We just do a cat helloworld, you can see, this is what we actually wrote in our file over here.
+
+Great.
+
+That is how you can use TFTP to download files from your host PC to your embedded board.
+
+As I said, tftp boot is a very handy way of booting when you need to recompile your kernel repeatedly
+
+and inserting and removing the SD card from the board is a tedious process. Isn't it?
+
+So, in those cases, tftp boot is really helpful.
+
+So, now there are couple of challenges for you right after this video and try to complete that.						
 
 
 
