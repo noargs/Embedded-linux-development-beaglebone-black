@@ -446,7 +446,7 @@ Take a look into the flow control diagram above, from **U-Boot** to **Linux** to
      
 **How U-boot hands off control to the "Boot Strap Loader" of the Linux kernel??**  
 
-Let's explore from the source file `bootm.c` of the u-boot [source code](https://source.denx.de/u-boot/u-boot) OR [mirror](https://ftp.denx.de/pub/u-boot/).    
+Let's explore from the source file `bootm.c` of the u-boot by cloning git repo `$ git clone https://source.denx.de/u-boot/u-boot.git` and [documentation](https://docs.u-boot.org/en/latest/build/source.html).    
 
 `$ sudo nano arch/arm/lib/bootm.c`     
     
@@ -1211,6 +1211,182 @@ If at the BeagleBone side it says	`Network is unreachable` then you might as wel
 TFTP boot is a very handy way of booting when you need to recompile your kernel repeatedly and inserting removing the SD card from the board is a tedious process
 
        					
+# U-boot    
+    
+**Understanding U-boot source tree**    
+
+As previously seen the u-boot repo downloaded (`$ git clone https://source.denx.de/u-boot/u-boot.git` and [documentation](https://docs.u-boot.org/en/latest/build/source.html))     
+     
+Now we will look into this directory.	U-boot source code supports various architectures and ports (like ARM, powerpc, AVR, ARC in `arch` directory) and various boards like ti, intel, atmel etc. in `boards` directory.   
+    
+Under **ti** there are various folders for SOC like `am335x`, `panda`, and `ti814x` etc. and their board related files (i.e. `board.c`) inside respective SOC folder.    	
+
+There are also various architecture for ARM inside `arch/arm/cpu` like arm11, armv8, and armv7 etc.	as we are using Cortex A8 which is based on arm7 architecture. **You will find one `start.S` file in armv7 `arch/arm/cpu/armv7/`**. This is the point where the ROM boot loader hands off control to the SPL (Second stage boot loader). It goes from CPU initialisation to SOC initialisation.		
+
+<img src="images/arch_arm_cpu_amrv7_start_assembly_api.png" alt="Assembly API for SPL">	    
+     
+There's another interesting folder named `config` where you can find various configuration files of different ports (`u-boot/configs$ ls -1 | wc -l` approx. 1200), There you will any file ends with **defconfig** (default configuration)	is used when you have no idea how to configure the U-Boot source code for your board. As you may not know what are the features you need to enable or disable. (Consequently, basic and required functionalities of the U-Boot will be available on your board.)	   
+
+You can list out various configuration files related to AM335 SOC by `$ ls -l am33`		  
+    
+In our case we will be using default configuration file for AM335 which named as `am335x_boneblack_defconfig`		 
+     
+**1. Cross tool-chain installation**      
+
+We will cross-compile the U-Boot source code to generate the binaries of the U-Boot as well as binaries for SPL Second stage boot loader	 	-
+
+1. Download [arm cross toolchain](https://releases.linaro.org/components/toolchain/binaries/7.5-2019.12/) for your Host machine (developed by Linaro)  **arm-linux-gnueabihf** where **hf** stands for hardfloat and look for **gcc-linaro-7.5.0-219.12-x86_64_arm-linux-gnueabihf.tar.xz**.    
+      
+2. export path of the cross compilation toolchain `export PATH=$PATH:/home/<username>/BBB_Workspace/Downloads/gcc-linaro-*-x86_64_arm-linux-gnueabihf/bin` in bashrc     
+```
+vi /home/<username>/.bashrc
+source /home/<username>/.bashrc
+```     
+      
+**2. U-Boot compilation** 			
+     
+1. **disclean** deletes all the previously compiled/generated object files, go to working directory (`$ cd ~/BBB_Workspace/Download/u-boot` and) run `make ARCH=arm CROSS_COMPILE=arm-linux-gnueabihf-	distclean` (mentioning the prefix of the command till **-** consequently the command like (gcc, as, ld) will be added by the "Makefile")    
+    
+2. Apply board **default configuration** for uboot (alternative configuration to `am335x_evm_defconfig` could be found at `u-boot/configs`) and now run `make CROSS_COMPILE=arm-linux-gnueabihf- am335x_evm_defconfig` and you can check the config which will be written to `.config` in the `u-boot` folder    
+      
+3. Run **menuconfig**, if you want to do any settings other than default configuration (as done in previous step which was saved in `u-boot/.config` file).	`make ARCH=arm CROSS_COMPILE=arm-linux-gnueabihf- menconfig`		
+      
+4. **Compilation**:
+```bash    
+make ARCH=arm CROSS_COMPILE=arm-linux-gnueabihf- -j4 # use j8 for 8 cores
+```   
+You will see it has created spl/u-boot-spl.bin and ran `MKIMAGE` on that file to create MLO (SPL + U-Boot header), and if you go to `u-boot/spl` you will find `u-boot-spl.bin` file there and `u-boot.img` in he u-boot directory  
+<img src="images/make_cross_compile_arm.png" alt="Make cross compile ARM">	     
+		 
+
+      
+# Understanding Linux source tree    
+     
+We'll learn the procedure to compile the Linux source code to generate the Linux kernel binary. Now download the Linux kernel source (`$ git clone --recursive https://github.com/beagleboard/linux`) and let's understand its source tree.     
+     
+<img src="images/linux_source_tree.png" alt="Linux source tree">		 
+
+As the picture below shows the relationship between the **Processor**, **SOC** and the **Board or a Product**.     
+     
+<img src="images/board_.png" alt="Beaglebone Board">		 
+     
+Now, the source code to handle all these three components, are systematically arranged in the Linux kernel source tree at different directories.      
+     
+<img src="images/arch_specific_code.png" alt="Arch specific code">		 
+     
+Suppose, if you want to run Linux on ARM based devices, then `linux/arch/arm` is the directory to explore the processor, SOC and board specific details.     
+      
+The core ARM processor related codes like to handle the memory management unit of the processor, cache memories, or the exceptions of the processors etc. will go into these directories.   
+     
+<img src="images/arch_specific_code2.png" alt="Arch specific code">		
+     
+Code specific to the SOC will go into the following directory which has a prefix `mach`.     
+     
+<img src="images/arch_specific_code3.png" alt="Arch specific code">		
+      
+Basically every vendor of the SOC has their own machine `mach` directory to keep their SOC specific source codes needed to work with their respective SOCs. Strictly speaking, this machine `mach` specific directory `arch/arm/mach-*` has two parts. One is **Board** related and another one is **Machine (SOC) shared common code**.    
+     
+<img src="images/arch_specific_code4.png" alt="Arch specific code">
+<img src="images/arch_specific_code5.png" alt="Arch specific code">					 
+     
+For example, the AM335x SOC belongs to Sitara family of SOCs by Texas Instruments. However, there is no directory called Machine Sitara in Linux, but there is a directory called Machine davinci. That's because, the davinci SOCs are for different market purpose (targeted for video applications). Hence the peripheral IPs are entirely different and they need different codes to handle them.     
+     
+<img src="images/arch_specific_code6.png" alt="Arch specific code">			 
+
+In the case of AM335x vs OMAP 2/3/4/5, even though the SOC belongs to a different family than OMAP, most of the peripheral IPs are exactly same as OMAP2/3/4 family of SOCs. Hence they still refer to machine OMAP2 directory for AM335x.    
+     
+<img src="images/arch_specific_code7.png" alt="Arch specific code">    
+      
+Whereas machine OMAP1 `mach-omap1` contains all the SOC shared common code to handle peripherals of the SOCs which are based on OMAP1 family only.
+
+**What are the important files you find in the machine OMAP2 directory?**   
+    
+You will find various C source files are related to different patterns which will help you to initialize various peripherals (SPI controller, I2C controller, highspeed MMC controller, clocking engine, GPIOs, serial ports etc), pin muxing, power management, clocking etc.    
+     
+<img src="images/arch_specific_code8.png" alt="Arch specific code"> 		 
+
+And note that, you can even change these file, if required according to you Product Design. And you should also remember that these source files are actually common among all the SOCs which share the same IP as OMAP2 SOC.   
+      
+**ARM Board configuration files organisation**     
+     
+Below are the images of some old boards which also had associated board file in the main line Linux kernel source.		 
+      
+<img src="images/board_config_organisation.png" alt="Board config organisation"> 		  
+<img src="images/board_config_organisation2.png" alt="Board config organisation">    
+     
+Every single board or a product was using their own board file to work with their hardware in the mainline Linux kernel source. Now this is no longer valid with the introduction of DTB.	 
+
+After the introduction of device tree, you may not see separate board files for each new board or a product in the market.
+For example, in the `arch/arm/mach-omap2` you see few board files and the newer kernel versions no longer hold board files related to each new board which comes with different variation of the SOC into the market.   
+
+Now, let's open the `board-generic.c` in the `mach-omap2` directory. You won't see any initialisation functions and platform device additions except one omap generic init which is suitable for all the platforms. 
+
+```c
+static void __init __maybe_unused omap_generic_init(void)
+{
+	pdata_quirks_init(omap_dt_match_table);
+	omap_soc_device_init();
+}
+```				 
+
+Previously, board was tied to single platform i.e. You couldn't use Pandora board file for beagleboard black.		     
+     
+Let's say, you are using a board AM3517 SOC and when the Linux detects your DTB it will read the field called `.dt_compat` from the DTB, that means a DTB will also has a field called `.dt_compat` then it will run a comparison function, in which the Linux compares DTB's `.dt_compat` field with every machine registration. it will end up using `.dt_compat = am3157_boards_compat`.     
+     
+```c
+static const char *const am3517_boards_compat[] __initconst = {
+	"ti,am3517",
+	NULL,
+};
+
+DT_MACHINE_START(AM3517_DT, "Generic AM3517 (Flattened Device Tree)")
+	.reserve	= omap_reserve,
+	.map_io		= omap3_map_io,
+	.init_early	= am35xx_init_early,
+	.init_machine	= omap_generic_init,
+	.init_late	= omap3_init_late,
+	.init_time	= omap_init_time_of,
+	.dt_compat	= am3517_boards_compat,
+	.restart	= omap3xxx_restart,
+MACHINE_END
+```		 
+      
+**SOC specific driver code organisation**     
+
+Drivers related to various device can be found in the `linux/drivers` directory of the linux kernel and it is one of the biggest layer in the linux kernel and contains driver codes for various peripherals like, interfaces, memory controller, bus controller, networking devices, serial devices, serial convertors, USB devices, graphics, LCD crypto engines and related drivers etc.		 
+
+Let's consider our system on chip AM335X SOC has all these following peripherals on chip (you can explore various peripherals in the TRM).    
+
+<img src="images/soc_am335x_peripherals.png" alt="SOC Peripherals">    
+
+Let's explore some of the path of Linux device drivers for various peripherals of this SOC. Driver for LCD controller and touchscreen controller for this SOC can be found in the path.
+       
+<img src="images/drivers1.png" alt="Drivers for various peripherals">  			
+<img src="images/drivers2.png" alt="Drivers for various peripherals">    
+    
+Now, to enable the connection of the external memory like the NOR flash, the NAND flash, or the external SRAM. The chip has the General Purpose Memory Controller (GPMC).   
+    
+<img src="images/drivers3.png" alt="Drivers for various peripherals">  
+<img src="images/drivers4.png" alt="Drivers for various peripherals"> 	
+<img src="images/drivers5.png" alt="Drivers for various peripherals">     
+
+if you want to locate any driver related to On chip Peripherals of a particular SOC, you just have to consult the drivers directory and it should be supporting a various drivers related to various peripherals of different SOC produced by different vendors.    
+     
+**Configuring and generating linux image**    
+    
+		   		 
+
+
+
+
+
+
+     
+
+
+
+
+
 
 
 
