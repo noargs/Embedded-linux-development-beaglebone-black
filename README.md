@@ -1387,8 +1387,10 @@ We will cross-compile our Linux source code to generate `uImage` binary.
 5. `linux$ make ARCH=arm CROSS_COMPILE=arm-linux-gnueabihf- -j4 modules` and it will create image at `arch/arm/boot/uImage`     
     
 6. `linux$ make ARCH=arm CROSS_COMPILE=arm-linux-gnueabihf- -j4 modules` it will cross compile and generate loadable modules with `.ko` extension 		
-
-7. `linux$ make ARCH=arm CROSS_COMPILE=arm-linux-gnueabihf- INSTALL_MOD_PATH=<path of the RFS> modules_install` the `.ko` files should be transfered to the Root File system and this step is called **modules installation** which we done here. Do this step after `Busybox`.
+     
+> [!IMPORTANT]	   
+> Skip this step now and do this after building BusyBox.    
+> 7. `linux$ make ARCH=arm CROSS_COMPILE=arm-linux-gnueabihf- INSTALL_MOD_PATH=<path of the RFS> modules_install` the `.ko` files should be transfered to the Root File system and this step is called **modules installation** which we done here. **Do this step after `Busybox`**.
     		 		 				 
 
 # Busybox    
@@ -1432,11 +1434,121 @@ This single busybox binary is implemented like a big switch case of C programmin
     
 The default configuration generated around 93 commands (`RFS_Static/bin$ ls -1 | wc -l`) in the **bin** folder (Our Host PC Ubuntu has 1936 commands `ls -1 /bin/ | wc -l`). You ca use the `menuconfig` to increase or decrease these commands. Furthermore, **sbin** (`RFS_Static/sbin$ ls -1 | wc -l)	has 72 commands	(and our Host PC's sbin has 385 commands)
 
-If you do `RF_Static/bin$ ls -l` inside **bin** then you will see these are not commands but softlinks (i.e. `cat -> busybox`), which are pointing to the BusyBox. Even in **sbin** `RF_Static/sbin$ ls -l` all the files pointing to Busybox (i.e. `sysctl -> ../bin/busybox`)	
+If you do `RF_Static/bin$ ls -l` inside **bin** then you will see these are not commands but softlinks (i.e. `cat -> busybox`), which are pointing to the BusyBox. Even in **sbin** `RF_Static/sbin$ ls -l` all the files pointing to Busybox (i.e. `sysctl -> ../bin/busybox`)	     
+      
+You can check the size of root file system by `$ du -sh`
+
+Now do the **7th step** which was skipped in the previous section by `cd` into **Linux source code directory** `linux$ make ARCH=arm CROSS_COMPILE=arm-linux-gnueabihf- INSTALL_MOD_PATH=/home/<username>/BBB_Workspace/RFC_Static modules_install`   
+     
+You will see the **lib** folder created inside **RFC_Static** directory and inside **lib** directory, there are another two directories **firmware** and **modules**.  		 
+
+```
+RFC_Static (Busybox)
+|
+├──lib
+|  ├── firmware
+|	 ├── modules 
+|  |   ├── 6.8.0-rc7 
+|  |   |   ├── kernel
+|  |   |   |   ├── arch
+|  |   |   |   ├── drivers
+|  |   |   |   ├── fs
+|  |   |   |   ├── lib
+|  |   |   |   ├── mm
+|              └── net
+|         
+├── usr
+|  ├── bin
+|	 ├── sbin 
+|
+├── bin
+├── sbin
+└── linuxrc
+```     
+     
+`RFS_Static/lib/modules/6.8.0-rc7` path contain the loadable kernel modules    
+A very important file (`sudo nano BBB_Workspace/RFS_Static/lib/modules/6.8.0-rc7/modules.dep`) which list out all the dependencies between the dynamically loadable kernel modules.    
+     
+**modprobe**    
+       
+The `modprobe` is a command which is used to add and remove modules from the Linux kernel. However it is very intelligent as the moment if you mention something like `$ modprobe cdc_eem.ko` it will not load this kernel module immediatley. It will go and read this file called `modules.dep` and will understand the dependencies from it and it will come to know that the `cdc_eem` is actually depending upon 2 more kernel modules. 	 		   
+
+<img src="images/modprobe.png" alt="Modprobe">	 
+
+**insmode**   
+
+The insmode is not as smart as modprobe. It will not read this file to understand the dependencies. it will just try to insert the module and return success or otherwide it will return failure.				
 
 
+**Testing boot images & busybox on BBB**			 		  
+       
+Let's test all our generated binaries by booting those binaries onto the hardware. First move all the files and diretories which will be used in the booting process into a folder `~/BBB_Workspace/compiled_bins`. 	
+```bash
+~/BBB_Workspace/compiled_bins$ cp ../Downloads/u-boot/u-boot.img . 
+~/BBB_Workspace/compiled_bins$ cp ../Downloads/u-boot/MLO .
+~/BBB_Workspace/compiled_bins$ cp ../Downloads/u-boot/spl/u-boot-spl.bin .
+~/BBB_Workspace/compiled_bins$ cp ../Downloads/linux/arch/arm/boot/uImage .
+~/BBB_Workspace/compiled_bins$ cp ../Downloads/linux/arch/arm/boot/dts/ti/omap/am335x-boneblack.dtb .
 
+~/BBB_Workspace/compiled_bins$ sudo cp uImage /var/lib/tftpboot/ 
+~/BBB_Workspace/compiled_bins$ sudo mkdir /srv && cd /srv && sudo mkdir nfs && cd nfs && sudo mkdir bbb && cd bbb
 
+/srv/nfs/bbb$ sudo cp -r /home/<username>/BBB_Workspace/RFS_Static/* . # copied bin, lib, linuxrc, sbin, and usr
+
+```		 
+     
+- Keep **MLO**, **u-boot.img**, **uEnv.txt** in the SD card (BOOT partition).    
+     
+- Load **uImage** from the host PC using **TFTP** protocol. We won't keep the uImage onto the SD card as we keep changing the uImage. Therefore removing, copying and re-inserting the SD card will be the tedious process.    
+     
+- Mount the **RFS** using **NFS** protocol.	Similarly we wont keep the Root File System on the SD card.	    
+     
+<img src="images/kernel_img_place.png" alt="Compiled bins">	 		 
+     
+> [!NOTE]   
+> We should also keep **uEnv.txt** file in the SD card to instruct the `u-boot` to load `uImage` and dtb using `TFTP` protocol, also mount the RFS using NFS protocol.	
+
+```
+
+```
+
+- `abosultepath` variable is path of the **tftp** folder (TFTP server directory path in the Host PC) which is resides under /var/lib/tftp   
+- `rootpath` actually tells where NFS mounting should happen (**/srv/nfs/bbb** path of the RTS in the Host PC and We will copy the generated busy box content to thos folder, This is where our Root file system will reside on the host PC), `wsize` is write size and `rsize` is read size. `rootdelay=5` is for Linux to halt for 5 seconds before trying to mount the RFS using NFS Protocol.    
+- `netargs` are boot arguments for Linux by this boot arguments linux comes to know that it has to mount the network based filesystem using NFS protocol `root=/dev/nfs` argument makes linux to mount the filesystem found in the `nfsroot` argument to mount point "/"   
+     
+Make some settings for the NFS access by going to file **/etc/exports**	and add an entry `srv/nfs/bbb/ 192.168.7.2(rw,sync,no_root_squash,no_subtree_check)` (This file actually grants the access to the various Hosts/NFS clients to access the NFS server based file system).    
+
+`192.168.7.2` is client (Beaglebone hardware)	and rest (rw,sync etc.) are access control arguments	  
+     
+Now run 3 important commands:    
+```bash 
+$ sudo exportfs -a
+$ sudo exportfs -rv
+$ sudo service nfs-kernel-server restart    # start the NFS server `Linux service`
+$ sudo service nfs-kernel-server --status-all
+$ sudo service nfs-kernel-server status
+```		 		
+    
+**Remove the SD card, Connect SD card to BBB, Open Minicom, Boot from SD card by pressing the S2 button and then giving the power**		
+     
+If its unable to communicate with the host (i.e. while booting from the TFTP minicom terminal freezes) then you have to configure the IP address for the Host PC. which you can also confirm by running `$ ifconfig` to get the name of Ethernet interface i.e. `enp0s3`. Go to **/etc/network/interfaces** and add following enteries:    
+```
+auto enp0s3
+iface enp0s3 inet static
+	address 192.168.7.1
+	netmask 255.255.255.0
+	network 192.168.7.0
+	gateway 192.253.7.1
+	dns-nameservers 8.8.8.8
+```    
+    
+If you get errors **can't open /dev/ttyx** which means it tries to open these devices which are not present and workaround is to create a directory `dev` in the `/srv/nfs/bbb`	(Contents of RFS_Static was initially copied into this directory, `bin`, `linuxrc`, `sbin` and `usr` and now `dev`). If it ask you to enter and then BusyBox terminal prompt will come.	 
+
+We successfully booted our Linux kernel by using minimalistic file system which we created using the busybox.	 	
+
+Next we talk about init program of the Busybox (first app the Linux launches from the file system which is present in the `sbin` directory). You can `/# cd sbin` in the Busybox prompt and check `/sbin# ls -l init`. This is the program which can launch several other services (i.e. bring up your network, start ssh, start logging, start tftp services etc.)    
+    
+**Understanding busybox init and rcS script**			
 
      
 
