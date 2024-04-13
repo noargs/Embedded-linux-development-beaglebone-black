@@ -1373,7 +1373,25 @@ Now, to enable the connection of the external memory like the NOR flash, the NAN
 if you want to locate any driver related to On chip Peripherals of a particular SOC, you just have to consult the drivers directory and it should be supporting a various drivers related to various peripherals of different SOC produced by different vendors.    
      
 **Configuring and generating linux image**    
+      
+We will cross-compile our Linux source code to generate `uImage` binary.
+
+1. First you have to download the official kernel, if you haven't done so, at `$ git clone https://github.com/beagleboard/linux` and run `linux$ make ARCH=arm CROSS_COMPILE=arm-linux-gnueabihf- distclean`     
+     
+2. `linux$ make ARCH=arm CROSS_COMPILE=arm-linux-gnueabihf- bb.org_defconfig`	use `omap2plus_defconfig` if `bb.org_defconfig` not found   
+
+3. `linux$ make ARCH=arm CROSS_COMPILE=arm-linux-gnueabihf- menuconfig`, we won't touch anything here just for learning purposes if you go to **Device Driver > SPI support** and change **User mode SPI device driver support** from **\*** (**y**) to **M** (**m**), **\*** means module will be compiled and included statically in image thus increasing the size of uImage whereas **M** means module is NOT compiled along with the kernel (also called dynamic loadable module). if you go to <Help> it will further tell you the entry name which in the case of **User mode SPI device driver support** is **CONFIG_SPI_SPIDEV:** and now you locate or confirm this entry in `linux/.config` file as `CONFIG_SPI_SPIDEV=m`. Alternatively if you want to change **M** (`m`) entry back to **y** (`*`) you have to go back to `menuconfig`  
+
+4. `linux$ make ARCH=arm CROSS_COMPILE=arm-linux-gnueabihf- uImage dtbs LOADADDR=0x80008000 -j4`   
+
+5. `linux$ make ARCH=arm CROSS_COMPILE=arm-linux-gnueabihf- -j4 modules` and it will create image at `arch/arm/boot/uImage`     
     
+6. `linux$ make ARCH=arm CROSS_COMPILE=arm-linux-gnueabihf- -j4 modules` it will cross compile and generate loadable modules with `.ko` extension 		
+
+7. `linux$ make ARCH=arm CROSS_COMPILE=arm-linux-gnueabihf- INSTALL_MOD_PATH=<path of the RFS> modules_install` the `.ko` files should be transfered to the Root File system and this step is called **modules installation** which we done here. Do this step after `Busybox`.
+    		 		 				 
+
+
 		   		 
 
 
