@@ -1509,7 +1509,16 @@ Let's test all our generated binaries by booting those binaries onto the hardwar
 > We should also keep **uEnv.txt** file in the SD card to instruct the `u-boot` to load `uImage` and dtb using `TFTP` protocol, also mount the RFS using NFS protocol.	
 
 ```
-
+console=ttyO0,115200n8
+ipaddr=192.168.7.2
+serverip=192.168.7.1
+loadaddr=0x82000000
+fdtaddr=0x88000000
+absolutepath=/var/lib/tftp/
+rootpath=/srv/nfs/bbb,nolock,wsize=1024,rsize=1024 rootwait rootdelay=5
+loadtftp=echo Booting from network;tftpboot ${loadaddr} ${absolutepath}uImage; tftpboot ${fdtaddr} ${absolutepath}am335x-boneblack.dtb
+netargs=setenv bootargs console=${console} root=/dev/nfs rw nfsroot=${serverip}:${rootpath}
+uenvcmd=setenv autoload no; run loadtftp; run netargs; bootm ${loadaddr} - ${fdtaddr}
 ```
 
 - `abosultepath` variable is path of the **tftp** folder (TFTP server directory path in the Host PC) which is resides under /var/lib/tftp   
