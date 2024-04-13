@@ -1391,9 +1391,48 @@ We will cross-compile our Linux source code to generate `uImage` binary.
 7. `linux$ make ARCH=arm CROSS_COMPILE=arm-linux-gnueabihf- INSTALL_MOD_PATH=<path of the RFS> modules_install` the `.ko` files should be transfered to the Root File system and this step is called **modules installation** which we done here. Do this step after `Busybox`.
     		 		 				 
 
+# Busybox    
+    
+Busybox is a software tool, that enables you to create a cutomised root file system for your embedded linux products.	You can create from very basic to advanced file system according to your requirements by using busybox configuration utilities. 
+     
+> [!NOTE]    
+> Previously, we have used ready made file systems from Angstrom and TI, Now let's create our own file system using a busybox tool.
 
+**Advantages of using busybox tool**    
+    
+1. It enables you to create customised file system that meets your resource requirements.
+
+2. If your product is a resource limited in terms of memory, then you can customise the file system such a way that, it can fit into your project with limited memory space.    
+    
+3. You can use this tool to remove all unwanted features which your product doesn't need, like you can remove unwanted Linux commands, features and directories, etc. using the customisation tool.    
+    
+4. Busybox has the potential to significantly reduce the memory consumed by various Linux commands by merging all the Linux commands into one single executable binary. 
+    
+Your Linux PC such as Ubuntu has around 350+ commands if you only consider the '/bin' and '/sbin' directories. There are more if you count /user/bin and /user/sbin directories.   
+     
+<img src="images/general_memory_consumption.png" alt="General memory consumption">   
+
+<img src="images/busybox_executable_binary.png" alt="Busybox executable binary"> 			 
+     
+This single busybox binary is implemented like a big switch case of C programming, where each case is a Linux command like ls, rcp or ifconfig etc. When you execute this binary with standard Linux command name as an argument, the respective command's output will be achieved.    
+    
+**Busybox compilation**		
 		   		 
+1. Download [Busybox](https://busybox.net/downloads) any `bz2`, extract it and you will get the source code for all your Linux commands (separated in multiple folders).
+     
+<img src="images/busybox_downloaded_dir.png" alt="Busybox downloaded dir">		 
+      
+ For example, **coreutils** implements all the core utilities (like `chmod`, `cat`, `dd` etc). **miscutils** folder may contain the miscellaneous utilities. **modutils** may be consisting of the modules related commands (like `lsmode` used to list all the loadable modules present in the kernel, `modprobe`, and `depmod` etc) as well as **findutils** etc.     
+      
+2. 	Apply default configuration `busybox$ make ARCH=arm CROSS_COMPILE=arm-linux-gnueabihf- defconfig`		  
+     
+3. Change default settings if required by `busybox$ make ARCH=arm CROSS_COMPILE=arm-linux-gnueabihf- menuconfig`. For now we want to build the busybox (All the Linux command source codes) in a static way by going in to **Settings >  Build Options (Build static binary (no shared libs))**. However it will increase the size . Later we will build BusyBox as a dynamic binary where we have to use shared libraries of the standard C. Now press space bar to toggle between selecting and deselecting. Next Save and Exit. And the new configuration is actually stored in the `.config` file
 
+4. Generate the busybox binary and minimal file system `busybox$ make ARCH=arm CROSS_COMPILE=arm-linux-gnueabihf- CONFIG_PREFIX=<install_path> install -j4`, Point the <install_path> to your workspace	(create `RFS_Static`)	 i.e. `CONFIG_PREFIX=/home/<username>/BBB_Workspace/RFS_Static`. The busybox has generated 3 major directories (`$ ls RFS_Static`) named **bin**, **sbin**, and **usr**. These 3 directories are sufficient to at least boot the Linux successfully.   
+    
+The default configuration generated around 93 commands (`RFS_Static/bin$ ls -1 | wc -l`) in the **bin** folder (Our Host PC Ubuntu has 1936 commands `ls -1 /bin/ | wc -l`). You ca use the `menuconfig` to increase or decrease these commands. Furthermore, **sbin** (`RFS_Static/sbin$ ls -1 | wc -l)	has 72 commands	(and our Host PC's sbin has 385 commands)
+
+If you do `RF_Static/bin$ ls -l` inside **bin** then you will see these are not commands but softlinks (i.e. `cat -> busybox`), which are pointing to the BusyBox. Even in **sbin** `RF_Static/sbin$ ls -l` all the files pointing to Busybox (i.e. `sysctl -> ../bin/busybox`)	
 
 
 
