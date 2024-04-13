@@ -1503,7 +1503,7 @@ Let's test all our generated binaries by booting those binaries onto the hardwar
      
 - Mount the **RFS** using **NFS** protocol.	Similarly we wont keep the Root File System on the SD card.	    
      
-<img src="images/kernel_img_place.png" alt="Compiled bins">	 		 
+<img src="images/kernel_img_placement.png" alt="Compiled bins">	 		 
      
 > [!NOTE]   
 > We should also keep **uEnv.txt** file in the SD card to instruct the `u-boot` to load `uImage` and dtb using `TFTP` protocol, also mount the RFS using NFS protocol.	
