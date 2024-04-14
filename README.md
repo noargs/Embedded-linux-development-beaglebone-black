@@ -1215,7 +1215,9 @@ TFTP boot is a very handy way of booting when you need to recompile your kernel 
     
 **Understanding U-boot source tree**    
 
-As previously seen the u-boot repo downloaded (`$ git clone https://source.denx.de/u-boot/u-boot.git` and [documentation](https://docs.u-boot.org/en/latest/build/source.html))     
+As previously seen the u-boot repo downloaded (`$ git clone https://source.denx.de/u-boot/u-boot.git` and [documentation](https://docs.u-boot.org/en/latest/build/source.html))  
+
+Download (u-boot)[https://ftp.denx.de/pub/u-boot/u-boot-2024.04.tar.bz2] 		    
      
 Now we will look into this directory.	U-boot source code supports various architectures and ports (like ARM, powerpc, AVR, ARC in `arch` directory) and various boards like ti, intel, atmel etc. in `boards` directory.   
     
@@ -1229,7 +1231,7 @@ There's another interesting folder named `config` where you can find various con
 
 You can list out various configuration files related to AM335 SOC by `$ ls -l am33`		  
     
-In our case we will be using default configuration file for AM335 which named as `am335x_boneblack_defconfig`		 
+In our case we will be using default configuration file for AM335 which named as `am335x_evm_defconfig`		 
      
 **1. Cross tool-chain installation**      
 
@@ -1372,7 +1374,7 @@ Now, to enable the connection of the external memory like the NOR flash, the NAN
 
 if you want to locate any driver related to On chip Peripherals of a particular SOC, you just have to consult the drivers directory and it should be supporting a various drivers related to various peripherals of different SOC produced by different vendors.    
      
-**Configuring and generating linux image**    
+## Configuring and generating linux image   
       
 We will cross-compile our Linux source code to generate `uImage` binary.
 
@@ -1380,9 +1382,11 @@ We will cross-compile our Linux source code to generate `uImage` binary.
      
 2. `linux$ make ARCH=arm CROSS_COMPILE=arm-linux-gnueabihf- bb.org_defconfig`	use `omap2plus_defconfig` if `bb.org_defconfig` not found   
 
-3. `linux$ make ARCH=arm CROSS_COMPILE=arm-linux-gnueabihf- menuconfig`, we won't touch anything here just for learning purposes if you go to **Device Driver > SPI support** and change **User mode SPI device driver support** from **\*** (**y**) to **M** (**m**), **\*** means module will be compiled and included statically in image thus increasing the size of uImage whereas **M** means module is NOT compiled along with the kernel (also called dynamic loadable module). if you go to <Help> it will further tell you the entry name which in the case of **User mode SPI device driver support** is **CONFIG_SPI_SPIDEV:** and now you locate or confirm this entry in `linux/.config` file as `CONFIG_SPI_SPIDEV=m`. Alternatively if you want to change **M** (`m`) entry back to **y** (`*`) you have to go back to `menuconfig`  
+3. `linux$ make ARCH=arm CROSS_COMPILE=arm-linux-gnueabihf- menuconfig`, we won't touch anything here just for learning purposes if you go to **Device Driver > SPI support** and change **User mode SPI device driver support** from **\*** (**y**) to **M** (**m**), **\*** means module will be compiled and included statically in image thus increasing the size of uImage whereas **M** means module is NOT compiled along with the kernel (also called dynamic loadable module). if you go to \<Help\> it will further tell you the entry name which in the case of **User mode SPI device driver support** is **CONFIG_SPI_SPIDEV:** and now you locate or confirm this entry in `linux/.config` file as `CONFIG_SPI_SPIDEV=m`. Alternatively if you want to change **M** (`m`) entry back to **y** (`*`) you have to go back to `menuconfig`  
 
-4. `linux$ make ARCH=arm CROSS_COMPILE=arm-linux-gnueabihf- uImage dtbs LOADADDR=0x80008000 -j4`   
+4. `linux$ make ARCH=arm CROSS_COMPILE=arm-linux-gnueabihf- uImage dtbs LOADADDR=0x80008000 -j4`  
+
+Remember, the dynamically loadable kernel modules are not yet compiled (\<M\> entries). You have to compile them separately, that we do in the next step.
 
 5. `linux$ make ARCH=arm CROSS_COMPILE=arm-linux-gnueabihf- -j4 modules` and it will create image at `arch/arm/boot/uImage`     
     
@@ -1428,7 +1432,10 @@ This single busybox binary is implemented like a big switch case of C programmin
       
 2. 	Apply default configuration `busybox$ make ARCH=arm CROSS_COMPILE=arm-linux-gnueabihf- defconfig`		  
      
-3. Change default settings if required by `busybox$ make ARCH=arm CROSS_COMPILE=arm-linux-gnueabihf- menuconfig`. For now we want to build the busybox (All the Linux command source codes) in a static way by going in to **Settings >  Build Options (Build static binary (no shared libs))**. However it will increase the size . Later we will build BusyBox as a dynamic binary where we have to use shared libraries of the standard C. Now press space bar to toggle between selecting and deselecting. Next Save and Exit. And the new configuration is actually stored in the `.config` file
+3. Change default settings if required by `busybox$ make ARCH=arm CROSS_COMPILE=arm-linux-gnueabihf- menuconfig`. For now we want to build the busybox (All the Linux command source codes) in a static way by going in to **Settings >  Build Options (Build static binary (no shared libs))**. However it will increase the size . Later we will build BusyBox as a dynamic binary where we have to use shared libraries of the standard C. Now press space bar to toggle between selecting and deselecting. Next Save and Exit. And the new configuration is actually stored in the `.config` file    
+    
+> [!NOTE]
+> you might stuck in "starting kernel" could be because the kernel's console serial port might be different by default. So, you would need to change that using menuconfig. **CONFIG_CMDLINE** is the config. When I ran into this issue, mine was set to **"root=/dev/mmcblk0p2 rootwait console=ttyO2,115200"**. Had to change it to **"root=/dev/nfs rootwait console=ttyO0,115200"**.		
 
 4. Generate the busybox binary and minimal file system `busybox$ make ARCH=arm CROSS_COMPILE=arm-linux-gnueabihf- CONFIG_PREFIX=<install_path> install -j4`, Point the <install_path> to your workspace	(create `RFS_Static`)	 i.e. `CONFIG_PREFIX=/home/<username>/BBB_Workspace/RFS_Static`. The busybox has generated 3 major directories (`$ ls RFS_Static`) named **bin**, **sbin**, and **usr**. These 3 directories are sufficient to at least boot the Linux successfully.   
     
@@ -1438,9 +1445,9 @@ If you do `RF_Static/bin$ ls -l` inside **bin** then you will see these are not 
       
 You can check the size of root file system by `$ du -sh`
 
-Now do the **7th step** which was skipped in the previous section by `cd` into **Linux source code directory** `linux$ make ARCH=arm CROSS_COMPILE=arm-linux-gnueabihf- INSTALL_MOD_PATH=/home/<username>/BBB_Workspace/RFC_Static modules_install`   
+Now do the **7th step** which was skipped in the previous section by `cd` into **Linux source code directory** `linux$ make ARCH=arm CROSS_COMPILE=arm-linux-gnueabihf- INSTALL_MOD_PATH=/home/<username>/BBB_Workspace/RFC_Static modules_install`. It will download all the kernel modules to the root file system 
      
-You will see the **lib** folder created inside **RFC_Static** directory and inside **lib** directory, there are another two directories **firmware** and **modules**.  		 
+You will see the **lib** folder appears inside **RFC_Static** directory and inside **lib** directory, there are another two directories **firmware** and **modules**.  		 
 
 ```
 RFC_Static (Busybox)
@@ -1465,10 +1472,12 @@ RFC_Static (Busybox)
 ├── sbin
 └── linuxrc
 ```     
+
+`RFS_Static/lib/modules/6.8.0-rc7/modules.builtin` file contain the list of all the **statically compiled kernel modules**
      
-`RFS_Static/lib/modules/6.8.0-rc7` path contain the loadable kernel modules    
-A very important file (`sudo nano BBB_Workspace/RFS_Static/lib/modules/6.8.0-rc7/modules.dep`) which list out all the dependencies between the dynamically loadable kernel modules.    
-     
+`RFS_Static/lib/modules/6.8.0-rc7/modules.dep` file contain the list of all the **dynamically loadable kernel modules** and their dependencies     
+             
+
 **modprobe**    
        
 The `modprobe` is a command which is used to add and remove modules from the Linux kernel. However it is very intelligent as the moment if you mention something like `$ modprobe cdc_eem.ko` it will not load this kernel module immediatley. It will go and read this file called `modules.dep` and will understand the dependencies from it and it will come to know that the `cdc_eem` is actually depending upon 2 more kernel modules. 	 		   
@@ -1491,6 +1500,7 @@ Let's test all our generated binaries by booting those binaries onto the hardwar
 ~/BBB_Workspace/compiled_bins$ cp ../Downloads/linux/arch/arm/boot/dts/ti/omap/am335x-boneblack.dtb .
 
 ~/BBB_Workspace/compiled_bins$ sudo cp uImage /var/lib/tftpboot/ 
+~/BBB_Workspace/compiled_bins$ sudo cp am335x-boneblack.dtb /var/lib/tftpboot/
 ~/BBB_Workspace/compiled_bins$ sudo mkdir /srv && cd /srv && sudo mkdir nfs && cd nfs && sudo mkdir bbb && cd bbb
 
 /srv/nfs/bbb$ sudo cp -r /home/<username>/BBB_Workspace/RFS_Static/* . # copied bin, lib, linuxrc, sbin, and usr
@@ -1509,15 +1519,13 @@ Let's test all our generated binaries by booting those binaries onto the hardwar
 > We should also keep **uEnv.txt** file in the SD card to instruct the `u-boot` to load `uImage` and dtb using `TFTP` protocol, also mount the RFS using NFS protocol.	
 
 ```
-console=ttyO0,115200n8
-ipaddr=192.168.7.2
-serverip=192.168.7.1
-loadaddr=0x82000000
+setenv console=ttyO0,115200n8
+setenv ipaddr 192.168.7.2
+setenv serverip 192.168.7.1
 fdtaddr=0x88000000
-absolutepath=/var/lib/tftp/
-rootpath=/srv/nfs/bbb,nolock,wsize=1024,rsize=1024 rootwait rootdelay=5
-loadtftp=echo Booting from network;tftpboot ${loadaddr} ${absolutepath}uImage; tftpboot ${fdtaddr} ${absolutepath}am335x-boneblack.dtb
-netargs=setenv bootargs console=${console} root=/dev/nfs rw nfsroot=${serverip}:${rootpath}
+rootpath=/srv/nfs/bbb,nfsvers=3,nolock,wsize=1024,rsize=1024 rootwait rootdelay=5
+loadtftp=echo Booting from network ...; tftpboot ${fdtaddr} ${serverip}:am335x-boneblack.dtb; tftpboot ${loadaddr} ${serverip}:uImage;
+netargs=echo Running netargs...; setenv bootargs console=${console} root=/dev/nfs rw rootfstype=nfs ip=${ipaddr} nfsroot=${serverip}:${rootpath} nfsrootdebug
 uenvcmd=setenv autoload no; run loadtftp; run netargs; bootm ${loadaddr} - ${fdtaddr}
 ```
 
@@ -1531,6 +1539,8 @@ Make some settings for the NFS access by going to file **/etc/exports**	and add 
      
 Now run 3 important commands:    
 ```bash 
+$ sudo apt-get update 
+$ sudo apt install nfs-kernel-server  # install if doesn't exist
 $ sudo exportfs -a
 $ sudo exportfs -rv
 $ sudo service nfs-kernel-server restart    # start the NFS server `Linux service`
@@ -1550,6 +1560,9 @@ iface enp0s3 inet static
 	gateway 192.253.7.1
 	dns-nameservers 8.8.8.8
 ```    
+
+> [!IMPORTANT]  
+> You have to give static ip address by `ifconfig <ethernet-port-name> 192.168.27.1, Or you can automate by saving above script in the `/etc/network/interfaces`. However you have to run **sudo service networking restart** everytime you log into Host PC. (Check to see if networking.service enabled `systemctl list-unit-files | grep -i network`, or ifupdown `ifconfig enp0s3 down && ifconfig enp0s3 up`
     
 If you get errors **can't open /dev/ttyx** which means it tries to open these devices which are not present and workaround is to create a directory `dev` in the `/srv/nfs/bbb`	(Contents of RFS_Static was initially copied into this directory, `bin`, `linuxrc`, `sbin` and `usr` and now `dev`). If it ask you to enter and then BusyBox terminal prompt will come.	 
 
@@ -1677,7 +1690,7 @@ You may come across error **Can't open '/etc/network/interfaces':	No such file o
 Next, remember we can add various scripts with sections `start` and `stop` to drive the starting and stopping of various services (like found in `S01logging`).	  
 
 Now, type `ifconfig` in the Busybox prompt and you will get one Ethernet port as we connected our board and the PC through Ethernet cable (physical Ethernet port to use with TFTP). However we cannot see Ethernet over USB interfaces as drivers for enumeratig the Ethernet as USB is not yet loaded (Those drivers are not present). You can ping the host at `/# ping 192.168.7.1` which will be accomplished over physical Ethernet cable.			 
-
+ 
 
 
 	     
