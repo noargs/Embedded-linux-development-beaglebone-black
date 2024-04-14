@@ -1555,9 +1555,141 @@ If you get errors **can't open /dev/ttyx** which means it tries to open these de
 
 We successfully booted our Linux kernel by using minimalistic file system which we created using the busybox.	 	
 
-Next we talk about init program of the Busybox (first app the Linux launches from the file system which is present in the `sbin` directory). You can `/# cd sbin` in the Busybox prompt and check `/sbin# ls -l init`. This is the program which can launch several other services (i.e. bring up your network, start ssh, start logging, start tftp services etc.)    
+   
     
 **Understanding busybox init and rcS script**			
+      
+Next we talk about init program of the Busybox (first app the Linux launches from the file system which is present in the `sbin` directory). You can `/# cd sbin` in the Busybox prompt and check `/sbin# ls -l init`. `init` is the program which launches several other services (i.e. bring up your network, start ssh, start logging, start tftp services etc.)     
+      
+Now, we understand the 'init' program of the busybox and the runlevel scripts.
+      
+<img src="images/linux_booting_process_.png" alt="Linux booting process">	    
+       
+ As we previously saw the Linux booting process where Linux at the end launches the init userspace application found in one of these locations as a last step in the kernel initialization.     			 
+
+<img src="images/init_locations.png" alt="Linux booting init locations">				
+
+That's the parent of all Linux processes and having the 'pid' number 1. The code to launch the init program is implemented in the function kernel init of main.c of the Linux kernel.							
+In busy box, you can locate this init file under the directory sbin (by typing `/srv/nfs/bbb/sbin$ ls-l init`) and you can see it is pointing back to the busybox.      
+      
+<img src="images/ls_l_init.png" alt="ls -l init">			
+     
+There are two types of init programs, which you can use with Linux. One is **Busybox init** and other is **Sytem V init**. Both inits program try to execute a special script.      
+     
+<img src="images/total_inits.png" alt="Total inits">			
+       
+The **Busybox init** tries to execute a script called **rcS**(which is present in the directory `/etc/init.d/`) of the file system. And **Sytem V init** program tries to execute a special script called **inittab** found in `/etc/init.d` directory of the file system.   
+    
+> [!NOTE]  
+> By default, busybox doesn't support system V init program.     
+      
+When we booted Busybox, the last message we received was the following			
+      
+<img src="images/initd_rcS.png" alt="Boot window">				
+
+It means the Busybox init program always tries to execute the rcS script present at the location `/etc/init.d`    
+     
+**rcS**		 
+     
+rcS is a script which is executed by the init program of the busy box.    
+      
+<img src="images/rcS.png" alt="use rcS to launch services/daemons during startup">	  
+
+We make a directory `etc` as well as `init.d` this is where **init** program looks for `etc/init.d`. We also create one `proc` folder as we will mount the proc file system here.     
+```bash
+/srv/nsf/bbb$ mkdir etc && cd etc && mkdir init.d  
+/srv/nsf/bbb/etc$ cd ../ && mkdir proc             # create proc inside bbb
+```     
+     
+We will place two scripts in `init.d` directory, one is rcS ('S' for start) and rcK ('K' for kill or shutdown). We will use **rcS** to launch 3 scripts `S01logging`, `S40network`, and `S50sshd`.      
+      
+Following **rcS** script should be placed in `/etc/init.d` folder.     
+```bash
+#!/bin/sh
+
+# Start all init scripts in /etc/init.d
+# executing them in numerical order.
+#
+echo "Mounting proc"
+mount -t proc /proc /proc
+
+for i in /etc/init.d/S??* ;do
+
+	# Ignore dangling symlinks (if any)
+	[ ! -f "$i" ] && continue
+
+	case "$i" in
+		*.sh)
+			# Source shell script for speed.
+			(
+				trap - INIT QUIT TSTP
+				set start
+				. $i
+			)
+			;;
+		*)
+			# No sh extension, so fork subprocess
+			$i start
+			;;	
+	esac
+done
+```     
+     
+In **rcS** script first we mount the proc file system as required by various Linux commands as some of the Linux commands extract information from the proc file system. Hence if the proc file system is not mounted then they will throw an error		
+
+Similarly **rcK** script	   
+```bash
+#!/bin/sh
+
+# Kill all init scripts in /etc/init.d
+# executing them in reversed numerical order.
+#
+
+for i in $(ls -r /etc/init.d/S??*) ;do
+
+	# Ignore dangling symlinks (if any)
+	[ ! -f "$i" ] && continue
+
+	case "$i" in
+		*.sh)
+			# Source shell script for speed.
+			(
+				trap - INIT QUIT TSTP
+				set stop
+				. $i
+			)
+			;;
+		*)
+			# No sh extension, so fork subprocess
+			$i stop
+			;;	
+	esac
+done   
+```
+
+> [!IMPORTANT]    
+> Rest of the scripts are placed in th repo at [scripts/etc/init.d](scripts/etc/init.d/) These should be placed in the directory `/srv/nfs/bbb/etc/init.d`	   
+      
+Next reboot from SD card by pressing the S2 button and then giving the power, we always boot from SD card as initial boots **MLO**, **u-boot.img**, **uEnv.txt** are placed in the SD card at BOOT partition.    
+
+You may come across error **Can't open '/etc/network/interfaces':	No such file or directory**	which we will create the file later.    
+     
+Next, remember we can add various scripts with sections `start` and `stop` to drive the starting and stopping of various services (like found in `S01logging`).	  
+
+Now, type `ifconfig` in the Busybox prompt and you will get one Ethernet port as we connected our board and the PC through Ethernet cable (physical Ethernet port to use with TFTP). However we cannot see Ethernet over USB interfaces as drivers for enumeratig the Ethernet as USB is not yet loaded (Those drivers are not present). You can ping the host at `/# ping 192.168.7.1` which will be accomplished over physical Ethernet cable.			 
+
+
+
+	     
+     
+
+
+
+
+
+	
+
+
 
      
 
