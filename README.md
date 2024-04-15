@@ -1382,15 +1382,16 @@ We will cross-compile our Linux source code to generate `uImage` binary.
      
 2. `linux$ make ARCH=arm CROSS_COMPILE=arm-linux-gnueabihf- bb.org_defconfig`	use `omap2plus_defconfig` if `bb.org_defconfig` not found   
 
-3. `linux$ make ARCH=arm CROSS_COMPILE=arm-linux-gnueabihf- menuconfig`, we won't touch anything here just for learning purposes if you go to **Device Driver > SPI support** and change **User mode SPI device driver support** from **\*** (**y**) to **M** (**m**), **\*** means module will be compiled and included statically in image thus increasing the size of uImage whereas **M** means module is NOT compiled along with the kernel (also called dynamic loadable module). if you go to \<Help\> it will further tell you the entry name which in the case of **User mode SPI device driver support** is **CONFIG_SPI_SPIDEV:** and now you locate or confirm this entry in `linux/.config` file as `CONFIG_SPI_SPIDEV=m`. Alternatively if you want to change **M** (`m`) entry back to **y** (`*`) you have to go back to `menuconfig`  
+3. `linux$ make ARCH=arm CROSS_COMPILE=arm-linux-gnueabihf- menuconfig`, we won't touch anything here just for learning purposes if you go to **Device Driver > SPI support** and change **User mode SPI device driver support** from **\*** (**y**) to **M** (**m**), **\*** means module will be compiled and included statically in image thus increasing the size of uImage whereas **M** means module is NOT compiled along with the kernel (also called dynamic loadable module). if you go to \<Help\> it will further tell you the entry name which in the case of **User mode SPI device driver support** is **CONFIG_SPI_SPIDEV:** and now you locate or confirm this entry in `linux/.config` file as `CONFIG_SPI_SPIDEV=m`. Alternatively if you want to change **M** (`m`) entry back to **y** (`*`) you have to go back to `menuconfig`     
 
-4. `linux$ make ARCH=arm CROSS_COMPILE=arm-linux-gnueabihf- uImage dtbs LOADADDR=0x80008000 -j4`  
+> [!NOTE]
+> you might stuck in "starting kernel" could be because the kernel's console serial port might be different by default. So, you would need to change that using menuconfig. **CONFIG_CMDLINE** is the config. When I ran into this issue, mine was set to **"root=/dev/mmcblk0p2 rootwait console=ttyO2,115200"**. Had to change it to **"root=/dev/nfs rootwait console=ttyO0,115200"**.				 
+
+4. `linux$ make ARCH=arm CROSS_COMPILE=arm-linux-gnueabihf- uImage dtbs LOADADDR=0x80008000 -j4` and it will create image at `arch/arm/boot/uImage`  
 
 Remember, the dynamically loadable kernel modules are not yet compiled (\<M\> entries). You have to compile them separately, that we do in the next step.
 
-5. `linux$ make ARCH=arm CROSS_COMPILE=arm-linux-gnueabihf- -j4 modules` and it will create image at `arch/arm/boot/uImage`     
-    
-6. `linux$ make ARCH=arm CROSS_COMPILE=arm-linux-gnueabihf- -j4 modules` it will cross compile and generate loadable modules with `.ko` extension 		
+5. `linux$ make ARCH=arm CROSS_COMPILE=arm-linux-gnueabihf- -j4 modules` it will cross compile and generate loadable modules with `.ko` extension 		
      
 > [!IMPORTANT]	   
 > Skip this step now and do this after building BusyBox.    
@@ -1432,10 +1433,7 @@ This single busybox binary is implemented like a big switch case of C programmin
       
 2. 	Apply default configuration `busybox$ make ARCH=arm CROSS_COMPILE=arm-linux-gnueabihf- defconfig`		  
      
-3. Change default settings if required by `busybox$ make ARCH=arm CROSS_COMPILE=arm-linux-gnueabihf- menuconfig`. For now we want to build the busybox (All the Linux command source codes) in a static way by going in to **Settings >  Build Options (Build static binary (no shared libs))**. However it will increase the size . Later we will build BusyBox as a dynamic binary where we have to use shared libraries of the standard C. Now press space bar to toggle between selecting and deselecting. Next Save and Exit. And the new configuration is actually stored in the `.config` file    
-    
-> [!NOTE]
-> you might stuck in "starting kernel" could be because the kernel's console serial port might be different by default. So, you would need to change that using menuconfig. **CONFIG_CMDLINE** is the config. When I ran into this issue, mine was set to **"root=/dev/mmcblk0p2 rootwait console=ttyO2,115200"**. Had to change it to **"root=/dev/nfs rootwait console=ttyO0,115200"**.		
+3. Change default settings if required by `busybox$ make ARCH=arm CROSS_COMPILE=arm-linux-gnueabihf- menuconfig`. For now we want to build the busybox (All the Linux command source codes) in a static way by going in to **Settings >  Build Options (Build static binary (no shared libs))**. However it will increase the size . Later we will build BusyBox as a dynamic binary where we have to use shared libraries of the standard C. Now press space bar to toggle between selecting and deselecting. Next Save and Exit. And the new configuration is actually stored in the `.config` file    	
 
 4. Generate the busybox binary and minimal file system `busybox$ make ARCH=arm CROSS_COMPILE=arm-linux-gnueabihf- CONFIG_PREFIX=<install_path> install -j4`, Point the <install_path> to your workspace	(create `RFS_Static`)	 i.e. `CONFIG_PREFIX=/home/<username>/BBB_Workspace/RFS_Static`. The busybox has generated 3 major directories (`$ ls RFS_Static`) named **bin**, **sbin**, and **usr**. These 3 directories are sufficient to at least boot the Linux successfully.   
     
@@ -1562,7 +1560,7 @@ iface enp0s3 inet static
 ```    
 
 > [!IMPORTANT]  
-> You have to give static ip address by `ifconfig <ethernet-port-name> 192.168.27.1, Or you can automate by saving above script in the `/etc/network/interfaces`. However you have to run **sudo service networking restart** everytime you log into Host PC. (Check to see if networking.service enabled `systemctl list-unit-files | grep -i network`, or ifupdown `ifconfig enp0s3 down && ifconfig enp0s3 up`
+> You have to give static ip address by `ifconfig <ethernet-port-name> 192.168.27.1`, Or you can automate by saving above script in the `/etc/network/interfaces`. However you have to run **sudo service networking restart** everytime you log into Host PC. (Check to see if networking.service enabled `systemctl list-unit-files | grep -i network`, or ifupdown `ifconfig enp0s3 down && ifconfig enp0s3 up`)
     
 If you get errors **can't open /dev/ttyx** which means it tries to open these devices which are not present and workaround is to create a directory `dev` in the `/srv/nfs/bbb`	(Contents of RFS_Static was initially copied into this directory, `bin`, `linuxrc`, `sbin` and `usr` and now `dev`). If it ask you to enter and then BusyBox terminal prompt will come.	 
 
