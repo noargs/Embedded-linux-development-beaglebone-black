@@ -1239,7 +1239,7 @@ We will cross-compile the U-Boot source code to generate the binaries of the U-B
 
 1. Download [arm cross toolchain](https://releases.linaro.org/components/toolchain/binaries/7.5-2019.12/) for your Host machine (developed by Linaro)  **arm-linux-gnueabihf** where **hf** stands for hardfloat and look for **gcc-linaro-7.5.0-219.12-x86_64_arm-linux-gnueabihf.tar.xz**.    
       
-2. export path of the cross compilation toolchain `export PATH=$PATH:/home/<username>/BBB_Workspace/Downloads/gcc-linaro-*-x86_64_arm-linux-gnueabihf/bin` in bashrc     
+2. export path of the cross compilation toolchain `export PATH=$PATH:/home/<YOUR-USERNAME>/BBB_Workspace/Downloads/gcc-linaro-*-x86_64_arm-linux-gnueabihf/bin` in bashrc     
 ```
 vi /home/<username>/.bashrc
 source /home/<username>/.bashrc
@@ -1687,18 +1687,145 @@ You may come across error **Can't open '/etc/network/interfaces':	No such file o
      
 Next, remember we can add various scripts with sections `start` and `stop` to drive the starting and stopping of various services (like found in `S01logging`).	  
 
-Now, type `ifconfig` in the Busybox prompt and you will get one Ethernet port as we connected our board and the PC through Ethernet cable (physical Ethernet port to use with TFTP). However we cannot see Ethernet over USB interfaces as drivers for enumeratig the Ethernet as USB is not yet loaded (Those drivers are not present). You can ping the host at `/# ping 192.168.7.1` which will be accomplished over physical Ethernet cable.			 
- 
+Now, type `ifconfig` in the Busybox prompt and you will get one Ethernet port as we connected our board and the PC through Ethernet cable (physical Ethernet port to use with TFTP). However we cannot see Ethernet over USB interfaces as drivers for enumeratig the Ethernet as USB is not yet loaded (Those drivers are not present). You can ping the host at `/# ping 192.168.7.1` which will be accomplished over physical Ethernet cable.	  
 
 
-	     
+ **Enabling ethernet over usb by driver intergration**		
+      
+Next, we will load Ethernet over USB's driver to get the functionality. Now, go to our beaglebone black terminal and run `/# lsmod`, here we can see there is no output which means, no dynamically loadable kernel modules are present as we have not loaded anything. If you go to `/srv/nfs/bbb/lib/modules/<kernel-version>` and open the `sudo nano modules.deps` and search for the word `g_ether.ko` which in turn dependent on 3 other drivers. Now do `modprobe g_ether` to load all the dependencies which `g_ether` dependent upon and finally it will load `g_ether`   
+    
+Now, if you do `/# lsmod`, there are 4 different drivers are present. Now, doing `/# ifconfig usb0 192.168.6.2 up` will return successfully. And running `/# ifconfig` will show usb0 interface is created. and there will be one more interface `enp0s20u3u2` will be enumarated.    
+     
+**Auto loading of drivers during system startup**			 
+
+Now let's automate the task of bringing up this usb0 interface on the beaglebone black hardware, the best place to bring up the various services is through the startup scripts `S40network`
+
+As we know, when we execute `ifup` command (in the BBB), it actually looks for the file `/etc/network/interfaces` (as written in `S40network` script file), Let's create this file at this location.    
+```
+/# cd /etc/ && mkdir network && cd network && touch interfaces
+```    
+     
+Now open `/etc/network/interfaces` file in the BBB and copy+paste following lines:    
+
+```
+# interfaces(5) file used by ifup(8) and ifdown(8)
+
+auto lo
+iface lo inet loopback
+
+auto eth0
+iface eth0 inet static
+	address 192.168.7.2
+	netmask 255.255.255.0
+	network 192.168.7.0
+	gateway 192.168.7.1
+
+auto usb0
+iface usb0 inet static
+	address 192.169.6.2
+	netmask 255.255.255.0
+	network 192.168.6.0
+	gateway 192.168.6.1
+```				 
+
+Next we create a module `S02module` and transfer it as follows:   
+```
+~/BBB_Workspace/scripts/etc/init.d# cp S02module /srv/nfs/bbb/etc/init.d/
+```    
+    
+Now reboot the BBB with TFT. You can `ifconfig` to confirm if the interface is down then `/etc/network/interfaces` is not working properly.	You can manually up it with `/# ifup -a` and you may have to create following folders/files if you come across following errors.   
+     
+<img src="images/s02module_errors.png" alt="Solving error while ifup -a">		 
+    
+Run `/# ifup -a` once again to confirm.		  
      
 
+# Buildroot		 
+You can read more about [Builtroot](https://buildroot.org/) at official website.   
+     
+Basically, instead of searching for various tools on the online like Cross toolchain, the kernel sources, the bootloader sources and searching for various file system, etc. in the Google. Buildroot makes your life easier by combining all those packages tools in one single package and then it will give you a nice configuration window from which you can select or de-select the required tools, middlewares or stacks for your embedded Linux project.   
+     
+You can access the [documentation](https://buildroot.org/downloads/manual/manual.html) in various formats HTML, PDF or ASCII format.    
+      
+In the [system requirements](https://buildroot.org/downloads/manual/manual.html#_about_buildroot), it says, You need a Linux based PC to run buildroot.     
+     
+These are [mandatory packages](https://buildroot.org/downloads/manual/manual.html#requirement-mandatory) which needs to be there in your Linux PC to run the buildroot successfully.     
+    
+[Download](https://buildroot.org/downloads/) the latest release and extract that in your workspace (`~/BBB_Workspace/Downloads`) and go to **arch** folder which consists of lots of configuration files for different architectures.    
+    
+Under **configs** directory, you will see lots of configuration files related to different boards in the market. Find the configs for BBB `buildroot-2024.02$ ls configs | grep -i beagle`    
+    
+Under **board** directory, you will find lots of directories related to different boards which are available in the market (i.e. these directories indicate that, the buildroot package is already tested on all these boards). You `cd` into beagleboard directory `buildroot-2024.02/board/beaglebone$ ls` and find configuration. There's also **patches** directory with patch _0001-keep-jtag-clock-alive-for-debugger.patch_ which needs to be applied to Linux kernel/Bootloader source for the Beaglebone black hardware (`board/beaglebone/patches/linux`). 
 
+> [!IMPORTANT]   
+> You need not to apply those patches, Buildroot itself will apply those patches to the Linux kernel whenever required (if you find any patches in the directory then you may mention the name of those patches when you do `menuconfig`).    
+     
+You can also read the `readme.txt` which describes how you can use buildroot with the Beaglebone black (Sitara based AM335x based boards). It highights **How to build it** by `$ make beaglebone_defconfig` or Optionally modify the configuration by `$ make menuconfig` and the `$ make` and also tells the possible **Result of the build**    
+      
+<img src="images/builtroot_beaglebone_patches_readme.png" alt="Builtroot patch readme.txt">			
 
+**Configuring and building Buildroot**    
 
+Let's start by making default configuration `buildroot-2024.02$ make beaglebone_defconfig` and next run menu config `buildroot-2024.02$ make menuconfig`   
+     
+Now, you can navigate through all these options to enable or disable appropriate settings. Leave everything under **Target options** as it is (i.e. Target architecture (ARM (little endian)), Target architecture (cortex-A8), Target binary format (ELF), etc), **Build options** will also remain intact. However we have two options for **Toolchain** > **Toolchain type**, One is **Buildroot toolchain** and another one is **External toolchain**.     
+     
+And if we look into the documentation of Buildroot about **6.1.2. External toolchain backend** "The external toolchain backend allows to use existing pre-built cross-compilation toolchains. Buildroot knows about a number of well-known cross-compilation toolchains (from Linaro for ARM, Sourcery CodeBench for ARM, x86-64, PowerPC, and MIPS, and is capable of downloading them automatically, or it can be pointed to a custom toolchain, either available for download or installed locally."    
 
-	
+- Select **Toolchain type** as _External toolchain_, **Tookchain** as _Linaro ARM 2019_       
+     
+- **Toolchain origin (Toolchain to be downloaded and installed)** select _Pre-installed toolchain_       
+     
+- **Toolchain path (NEW)** give path to your toolchain downloaded and extracted at `/home/ibn/toolchains/gcc-linaro-7.5.0-2019.12-x86_64_arm-linux-gnueabihf/bin/`     
+      
+- Go back and enter into **System configuration**	 > **System hostname** 	_your name_     
+
+- **System banner** as any greetings i.e. _Welcome to Buildroot-BBB_	   
+
+- **Init system** as _BusyBox_			
+
+- **Enable root login with password** is already selected however **Root password** type in _root_		 			
+     
+- Enter **Run a getty (login prompt) after boot** and in console **TTY port** type _ttyO0_ and **Baudrate** _(115200)_	   
+
+- Go back and enter into **Kernel** and unselect **Linux Kernel** (Buildroot will not build any Linux kernel as we already built in the previous sections)	    
+
+- Go back and enter into **Target packages**, scroll down to **Network applications** and select (by pressing Space bar) **openssh**    
+
+- Go back and enter into **Bootloaders** and unselect **U-Boot** (we don't want to build)	  				
+
+You can exit and save and configuration will be saved at `buildroot-2024.02/.config`		  
+
+And finally run   `$ make -j4`    
+    
+There will be some errors as buildroot tried to run the script on MLO and other images however we have not built any MLO, uImage or U-Boot image. Hence we deselected everything which is completely fine. Now list `$ ls buildroot-2024.02/output/images` and you will see the following contents:   
+    
+<img src="images/builtroot_output_images_ls.png" alt="list buildroot's output/images folder">			
+     
+You should backup the `/srv/nfs/bbb` somewhere, then empty it completely 	and copy following into **bbb** folder `~/BBB_Workspace/Downloads/buildroot-2024.02/output/images# tar -xf rootfs.tar -C /srv/nfs/bbb/`	 
+
+You can **list the filesystem we have creatd using Buildroot** `$ ls -l /srv/nfs/bbb`
+
+Now reboot our beagleboe hardware, it will mount the nfs root file system and here is a login (username/password root). we'll try to ping to our system `# ping 192.168.7.1`.    
+     
+**SSH from Host**    
+
+let's try ssh from our Host PC to beaglebone address `# ssh -l root 192.168.7.2`and typing password `root`, it may deny the permission to access beaglebone over ssh. Therefore we need to fix couple of thing by going into Host PC and open `/srv/nfs/bbb/etc/ssh$ sudo nano sshd_config`, There you uncomment/edit as `PermitRootLogin yes` and you might also restart the ssh server for things to take into effect. In the beaglebone     
+```
+# cd /etc/init.d/
+# ls
+S01logging S20urandom S40network S50sshd rcK rcS
+# ./S50sshd restart
+Stopping sshd: OK
+Starting sshd: OK
+#
+```
+
+Alternatively we can also login to our Host PC from the Beaglebone. First we have to install the ssh server on our PC `$ sudo apt-get install openssh-server` and now login from the Beaglebone (typing Host PC username and then password when prompted).    
+```
+# ssh -l ibn 192.168.7.1
+```    
+    
 
 
 
