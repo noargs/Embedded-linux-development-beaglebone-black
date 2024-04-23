@@ -1824,7 +1824,36 @@ Starting sshd: OK
 Alternatively we can also login to our Host PC from the Beaglebone. First we have to install the ssh server on our PC `$ sudo apt-get install openssh-server` and now login from the Beaglebone (typing Host PC username and then password when prompted).    
 ```
 # ssh -l ibn 192.168.7.1
-```    
+```     
+
+**Builroot Linux and U-boot configurations**     
+      
+Let's see how we can enable the Kernel building and the Boot loader building via the buildroot.
+
+Now, run `buildroot-2024.02$ make menuconfig` and go to kernel. We actually deselected the **Kernel** last time. Now let's select it. You can pick the latest kernel version by default (Otherwise, you have to use the Custom Git repository option for any Linux or official beaglebone git repo via Url, for smooth running).    
+     
+- Keep **Kernel version** the latest one (i.e. 6.6), 
+- **Custom kernel patches**, we have none. 
+- **Defconfig name** as provided last time in the Linux build process (omit _defconfig keyword) `omap2plus`		 
+- **Additional configuration fragment files** leave it unchanged.     
+- **Kernel binary format** as `uImage`
+- **load address** (as 0x80008000) If your ARM system's Linux kernel is configured with new means 3.7+ multi architecture support, then it is necessary to specify a kernel load address when building the uImage.    
+- **Build a Device Tree Blob (DTB)**  and **DTB is built by kernel itself** select it.    
+- **In-tree Device Tree Source file names** as `am335x-boneblack` without trailing file extension .dts   
+     
+Go back and enter into **Bootloader** menu	
+- Select **U-Boot** and **U-Boot Version** which is current and already selected,     
+- **Board defconfig** as `am335x_evm`	(we omit the trailing `defconfig`)     
+- **U-Boot needs dtc** selected
+- **U-boot** binary format as `u-boot.img`   
+- **Install U-Boot SPL binary image** selected
+- **U-Boot SPL binary image name** `MLO`		  
+
+Now Exit And finally run `buildroot-2024.02$ make -j4`    
+
+You can copy the content (uImage, am335x-boneblack.dtb) from `buildroot-2024.02/output/images` to `/var/lib/tftboot`. You can also copy `u-boot.img` to SD card but that is not required.    
+    
+You can reboot and confirm the Kernel version.		
     
 
 
