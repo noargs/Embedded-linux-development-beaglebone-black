@@ -691,9 +691,45 @@ The **eMMC** memory is actually connected to the **mmc1** interface and the **mi
       
 > [!NOTE]    
 > If your board already running latest version of debian OS image, then you NEED NOT to try this.   
-> Check your BBB debian OS version `$ lsb_release -da` and compare the output with debian latest release. (You have to log into BBB by `minicom` if you aren't able to find the right `/dev/<PORT>` then use `$ dmesg` command)
+> Check your BBB debian OS version `$ lsb_release -da` and compare the output with debian latest release. (You have to log into BBB by `minicom` if you aren't able to find the right `/dev/<PORT>` then use `$ dmesg` command)     
+     
+		  
+**Configure BBB Network connection over USB**     
+       
+Now, open two terminals, one **Host side** and other **BBB side** (`$ ssh -l debian 192.168.6.2`). 
 
-To configure BBB Network connection over USB, follow the Networking [guide](Docs/Networking.pdf) 
+Do `ifconfig` on **BBB side** you will see `eth0`, `lo`, `usb0` (192.168.7.2) and `usb1` (192.168.6.2), ping your Host `ping 192.168.7.1` or `ping 192.168.6.1`
+
+Do `ifconfig` on **Host side** you will see `ens33`, `enx0479b7b4f8c8` (192.168.7.1), `enx0479b7b4f8ca` (192.168.6.1) and `lo`, ping BBB `ping 192.168.6.2`
+     
+When you connect BBB to Host it will enumerate two Ethernet, each usb (BBB's usb0 and usb1) corresponde to each ethernet interface (enx0479b7b4f8c8 and enx0479b7b4f8ca).		
+
+**BBB**    
+- Create/modify one file `sudo nano /etc/resolv.conf` and write 
+```
+nameserver 8.8.8.8
+nameserver 8.8.4.4
+```
+- Add default gateway address to the routing table  
+```     
+$ route add default gw 192.168.7.1 usb0
+$ route add default gw 192.168.6.1 usb1
+```     
+      
+**Host**     
+```
+# iptables settings to share internet between wifi(or ethernet) of Host to ethernet of BBB
+$ iptables --table nat --append POSTROUTING --out-interface <Host wifi/ethernet interface i.e. `ens33`> -j MASQUERADE     
+     
+$ iptables --append FORWARD --in-interface <BBB ethernet `enx0479b7b4f8ca` interface to share with> -j ACCEPT	     
+     
+# Enable ip forwarding at Host side
+echo 1 > /proc/sys/net/ipv4/ip_forward  # you may have to be root by #'$ sudo su' and enter password		 
+```			
+     
+Now from BBB, `$ ping www.google.com`	and finally update with `$ apt-get update` 
+
+To configure BBB Network connection over USB, when Host PC doesn't show the 2 enumerated Ethernets (When BBB is connected and running ifconfig on Host PC) follow the Networking [guide](Docs/Networking.pdf)     
    
 As disscussed in the Networking guide following commands has to be saved in the **BBB** and **Host** machine.   
 
