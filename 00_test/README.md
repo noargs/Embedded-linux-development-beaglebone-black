@@ -13,17 +13,43 @@ You also have to go to the place where **make** for Windows was installed (**Gnu
 
 **Installing Remote System Explorer and Testing Application**    
 
-Now we have to transfer the binary to the Beaglebone hardware using something called the **Remote System Explorer** (actually an eclipse perspective). It allows you to connect, work with a variety of remote systems.     
+Now we have to transfer the binary to the Beaglebone hardware using **Remote System Explorer** (actually an eclipse perspective). It allows you to connect, work with a variety of remote systems.     
      
 let's go to **help** and click on **Install new software** and in **Work with:** choose _All Available Sites_ from the dropdown. You will see the Lists appear after sometime. There find and select **Mobile and Device Development** (Under this section among other you will see an entry for _TM Terminal View Remote System Explorer add-in_. Just click **Next** and **Accept the Terms and conditions** when it installed completely, Restart your eclipse.
 
 Now go to **Window** > **Show View** > **Other**, expand the **Remote Systems** and then select **Remote System** and then click on **Open**.    
      
-<img src="images/remote_system_connection_button.png" alt="Remote system connection button">	     
+<img src="../images/remote_system_connection_button.png" alt="Remote system connection button">	     
      
 Click the button as shown above and select _SSH only_ click Next, leave **Parent profile** as it is, **Host name** as _192.168.7.2_ and connection name _BBB_ click Next twice and then Finish. _Connect your BBB to PC now via the mini USB cable. No need to connect Ethernet cable_
         
-Just power on your beaglebone hardware and give the power over the USB cable and when you reset the board, it will boot the debian image from the eMMC memory.(open Tera Term and the serial port before reseting your board)
+Just power on your beaglebone hardware and give the power over the USB cable and when you reset the board, it will boot the debian image from the eMMC memory.(open Tera Term and the serial port before reseting your board)     
+      
+You can control all these gpios using the sysfs entries `# ls /sys/class/gpio/` you may have to get a root access. When you `ls` the directory `/sys/class/gpio` and also look into **Table 12, SRM page:66**. _Expansion Header P8 pinout_ you will see entirely different naming convention. Here in `/sys/class/gpio` it just uses gpio, it doesn't mention which module it is. 
+
+Expansioon header P8, You get 44 gpios (46 - 2)
+Expansion header P9, You get 23 gpios
+Total gpios available on the bbb expansion header = 67
+**Table 12, SRM page:66** gpio1[6] ==> 1 x 32 + 6  ==>  **/sys/class/gpio/** GPIO38      
+gpio0[27]  ==> 0 x 32 + 27 ==> GPIO27   
+     
+Pad (pin) configuration registers are present at offset 800h (from BASE_ADDRESS `0x44E1_0000` of the control module registers **AM335x Technical Reference Manual page:158** )     
+     
+<img src="../images/conf_register_control_module.png" alt="Conf register of Control module">	    
+      
+# Exploring pin details using SYSFS enteries      
+
+We go to sysfs directory to get the details of register (configuration register of control module). Now, go to the `sys/kernel/debug/pinctrl`     
+     
+<img src="../images/sys_kernel_debug_pinctrl.png" alt="Sys directory">	
+
+           
+
+Pad configuration registers, `/sys/kernel/debug/pinctrl/44e10800.pinmux`     
+      
+
+
+  
 
 
 
