@@ -41,12 +41,69 @@ Pad (pin) configuration registers are present at offset 800h (from BASE_ADDRESS 
 
 We go to sysfs directory to get the details of register (configuration register of control module). Now, go to the `sys/kernel/debug/pinctrl`     
      
-<img src="../images/sys_kernel_debug_pinctrl.png" alt="Sys directory">	
-
-           
+<img src="../images/sys_kernel_debug_pinctrl.png" alt="Sys directory">	     
 
 Pad configuration registers, `/sys/kernel/debug/pinctrl/44e10800.pinmux`     
+
+You can go to [Spreadsheet](../Docs/Headerpinsmap.xlsx) contains the **pins mapping** get in the output of running (`/sys/kernel/debug/pinctrl/44e10800.pinmux$ cat pin | more`)(which is imaginery software pins numbering) with the pins in [System Reference Manual of Table 12 and 13](../Docs/BBB_SRM.pdf).         
       
+
+# Controlling User LEDs using SYSFS enteries     
+       
+If you open the **SRM page:52 6.6 User LEDs** these are the user LEDs, which is available on board.        
+     
+<img src="../images/user_leds_6.6_srm.png" alt="SRM page:52 6.6 User LEDs">	     
+       
+The user **LED0** is actually connected to _GPIO module 1 pin number 21_ (GPIO1_21). if you want to convert this to a kernel friendly GPIO number, then:     
+     
+**GPIO1_21** ==> 1 x 32 + 21 ==> **GPIO53**
+
+`cd` into `# cd /sys/class/gpio` and `ls` at `/sys/class/gpio# ls`, You will find the following enteries, However you will not find any entery for gpio53 (Kernel friendly GPIO number 53 calculated above) by doing `/sys/class/gpio# ls gpio3`.     
+     
+However you can create the entry by using `/sys/class/gpio# echo 53 > export`. when you press enter, you see it says that _Device or resource is busy_. Reason being is, these GPIO numbers that is GPIO**53** (GPIO1_21), GPIO**54** (GPIO1_22), GPIO**55** (GPIO1_23), and GPIO**56** (GPIO1_24) actually claimed by the user LED driver of the Linux kernel.      
+     
+<img src="../images/sys_class_gpio_echo_53_greater_export.png" alt="Listing GPIO53 and creating entery for it as not exist already">	     
+        
+That LED driver actually creates a separate directory called 'leds' in `/sys/class/leds` and by doing **ls** you will see the 4 enteries for corresponding 4 user LEDs.      
+     
+<img src="../images/enteries_for_user_leds.png" alt="4 Enteries for User LEDs">	    
+      
+You can first read the **trigger** and then send command to **trigger** to turn on/of LED etc.      
+     
+<img src="../images/trigger_led_blinking.png" alt="LED blinking with trigger">	   
+
+If you run `/sys/class/leds/beaglebone:green:usr0# echo "none" > trigger` and `cat trigger` again you will see **[none]** is now wrapped in square brackets (means currently selected)        
+     
+```bash
+# on for sometime and off for sometime (blinking)
+/sys/class/leds/beaglebone:green:usr0# echo "timer" > trigger
+```     
+      
+When you see the on and off paterrn it will be perfect squarewave (equal time for on and off). which you an change by `delay_on` and `delay_off` inside **beaglebone:green:usr0**     
+
+```bash
+/sys/class/leds/beaglebone:green:usr0# echo "100" > delay_on
+/sys/class/leds/beaglebone:green:usr0# echo "500" > delay_off
+```             
+    
+When you do `cat trigger` you will find following output:     
+
+```bash
+root@BeagleBone:/sys/class/leds/beaglebone:green:usr0# cat trigger
+none usb-gadget usb-host rfkill-any rfkill-none kbd-scrolllock kbd-numlock kbd-capslock kbd-kanalock kbd-shiftlock kbd-altgrlock kbd-ctrllock kbd-altlock kbd-shiftllock kbd-shiftrlock kbd-ctrlllock kbd-ctrlrlock [timer] oneshot disk-activity disk-read disk-write ide-disk mtd nand-disk heartbeat backlight gpio cpu cpu0 activity default-on panic netdev mmc1 mmc0 4a101000.mdio:00:link 4a101000.mdio:00:100Mbps 4a101000.mdio:00:10Mbps
+```          
+     
+Whenever you access the **external mmc card** (which is connected to 0, i.e. `mmc0`), or the **internal mmc card** (`mmc1`), when you access those memories, You can make led blink.
+      
+```bash
+root@BeagleBone:/sys/class/leds/beaglebone:green:usr0# echo "none" > trigger
+root@BeagleBone:/sys/class/leds/beaglebone:green:usr0# echo "mmc1" > trigger
+root@BeagleBone:/sys/class/leds/beaglebone:green:usr0# cat trigger
+```     
+      
+`cat trigger` will show mmc1 is selected as **[mmc1]**. Now if you access the internal emmc (i.e. filesystem which is residing in the internel emmc) by going to `/home/debian` and creating a file `touch foobar` and when you write and save it will make the User1 LED blink and also by running `sync` command (which flushes all the data to the file system) you can see that it blinks However runing `sync` again won't blink as It already flushed the data.
+     
+You can also make the LED blink whenever you access the SD card (connected to mmc0)     
 
 
   
