@@ -58,6 +58,7 @@ int main(int argc, char* argv[])
 	{
 	  /* converting argv[2] which is a brightness value in to integer */
 	  int value = atoi(argv[2]);
+//	  printf("value received %d", value);
 	  process_brightness_values(value);
 	}
 	else
@@ -72,13 +73,13 @@ int main(int argc, char* argv[])
 /* compare and process the trigger values given by the user */
 void process_trigger_values(char* value)
 {
-  if (strcmp(value, "timer") || strcmp(value, "heartbeat") || \
-	  strcmp(value, "none") || strcmp(value, "oneshot") || \
-	  strcmp(value, "default-on"))
+  if (!(strcmp(value, "timer") && strcmp(value, "heartbeat") && \
+	  strcmp(value, "none") && strcmp(value, "oneshot") && \
+	  strcmp(value, "default-on")))
   {
 	write_trigger_values(USER_LED_NUMBER, value);
   }
-  else
+  else  /* default: */
   {
 	printf("Invalid value\n");
 	printf("valid trigger values: heartbeat, timer, none, oneshot, default-on");
@@ -90,12 +91,13 @@ void process_brightness_values(int value)
 {
   switch(value)
   {
+  case 0:
   case 1:
 	write_brightness_values(USER_LED_NUMBER, value);
 	break;
-  case 0:
-	write_brightness_values(USER_LED_NUMBER, value);
-	break;
+//  case 1:
+//	write_brightness_values(USER_LED_NUMBER, value);
+//	break;
   default:
 	printf("Invalid value\n");
 	printf("Valid brightness values: 0, 1\n");
@@ -115,11 +117,12 @@ int write_trigger_values(uint8_t led_no, char* value)
   snprintf(buf, sizeof(buf), SYS_FS_LEDS_PATH "/beaglebone:green:usr%d/trigger", led_no);
 
   /* open the file in write mode */
-  /* returns the file descriptor for the new file. the file descriptor returned is always the smallest integer
+  /*
+   * returns the file descriptor for the new file. the file descriptor returned is always the smallest integer
    * greater than zero that
    */
   fd = open(buf, O_WRONLY);
-  if (fd < 0)
+  if (fd <= 0)
   {
 	perror("write trigger error\n");
 	return -1;
@@ -130,7 +133,7 @@ int write_trigger_values(uint8_t led_no, char* value)
    * Returns the number of bytes that were written
    * if value is negative, then the system call returned an error
    */
-  ret = write(fd, value, sizeof(value));
+  ret = write(fd, (void*)value, strlen(value));
   if (ret <= 0)
   {
 	printf("trigger value write error\n");
@@ -152,7 +155,8 @@ int write_brightness_values(uint8_t led_no, int value)
   snprintf(buf, sizeof(buf), SYS_FS_LEDS_PATH "/beaglebone:green:usr%d/brightness", led_no);
 
   /* open the file in write mode */
-  /* returns the file descriptor for the new file. The file descriptor returned is always the smallest integer greater than
+  /*
+   * returns the file descriptor for the new file. The file descriptor returned is always the smallest integer greater than
    * zero that is still available, if a
    */
   fd = open(buf, O_WRONLY);
@@ -163,10 +167,17 @@ int write_brightness_values(uint8_t led_no, int value)
   }
 
   /* write the 'value' in to the file designated by 'fd' */
-  /* return the number of bytes that were written
+  /*
+   * return the number of bytes that were written
    * if value is negative, then the system call returned an error
+   *
+   * https://stackoverflow.com/questions/58259818/how-to-write-integers-with-write-function-in-c
    */
-  ret = write(fd, &value, sizeof(value));
+//  ret = write(fd, (void*)&value, sizeof(value));
+  char buffer[2];
+  sprintf(buffer, "%d", value);
+  ret = write (fd, (void*)buffer, sizeof(buffer));
+
   if (ret <= 0)
   {
 	printf("trigger value write error\n");
