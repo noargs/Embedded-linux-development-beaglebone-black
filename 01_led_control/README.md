@@ -17,11 +17,11 @@ valid 'trigger' values: heartbeat, timer, none, oneshot, default-on
 
 # How to execute this application?      
        
-```
-./01_led_control trigger heartbeat
-./01_led_control trigger oneshot
-./01_led_control trigger none
+```bash
+root@BeagleBone:/home/debian/Desktop# ./01_led_control trigger heartbeat
+root@BeagleBone:/home/debian/Desktop# ./01_led_control trigger oneshot
+root@BeagleBone:/home/debian/Desktop# ./01_led_control trigger none
 
-./01_led_control brightness 1
-./01_led_control brightness 0
+root@BeagleBone:/home/debian/Desktop# ./01_led_control brightness 1
+root@BeagleBone:/home/debian/Desktop# ./01_led_control brightness 0
 ```    
