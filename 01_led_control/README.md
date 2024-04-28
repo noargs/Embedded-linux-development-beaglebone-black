@@ -1,4 +1,8 @@
 Build the application `01_led_control` and click to **Binaries** section to expand, Now drag and drop `01_led_control` into Remote Systems windows and finally inside `My Home > Desktop` (Make sure your BBB is connected to your PC)      
+     
+
+     
+<img src="../images/remote_systems_drag_n_drop.png" alt="Remote system Drag and drop">	       
       
 Now, you can go to **Terminal** section of IDE, log in as root and run following commands as follows:     
 
