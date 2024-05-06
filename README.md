@@ -1253,7 +1253,7 @@ TFTP boot is a very handy way of booting when you need to recompile your kernel 
 
 As previously seen the u-boot repo downloaded (`$ git clone https://source.denx.de/u-boot/u-boot.git` and [documentation](https://docs.u-boot.org/en/latest/build/source.html))  
 
-Download (u-boot)[https://ftp.denx.de/pub/u-boot/u-boot-2024.04.tar.bz2] 		    
+Download [u-boot](https://ftp.denx.de/pub/u-boot/u-boot-2024.04.tar.bz2) 		    
      
 Now we will look into this directory.	U-boot source code supports various architectures and ports (like ARM, powerpc, AVR, ARC in `arch` directory) and various boards like ti, intel, atmel etc. in `boards` directory.   
     

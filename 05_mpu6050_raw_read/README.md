@@ -158,7 +158,9 @@ Now, we try our luck for P9_19 and P9_20 which correspond to software pins 95 an
 **Datasheet references**       
 1. Consult Expansion header (p9) [Table 13, page : 68](../Docs/BBB_SRM.pdf) info on VCC, GND, and  I<sup>2</sup>C2 pins
 2. MPU-6000 and MPU_6050 [Product Speicification Revision 3.3](../Docs/MPU-6000-Datasheet1.pdf)    
-3. MPU-6000 and MPU_6050 [Register Map and Description Revision 4.2](../Docs/MPU-6000-Register-Map1.pdf)      
+3. MPU-6000 and MPU_6050 [Register Map and Description Revision 4.2](../Docs/MPU-6000-Register-Map1.pdf)    
+
+<img src="../images/expansion_header.png" alt="Expansion Headers of BeableBone Black & Pins details">          
 
 
 
