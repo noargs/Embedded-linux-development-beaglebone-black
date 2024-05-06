@@ -117,7 +117,7 @@ Here's the schematic of MPU6050 from [Adafruit](https://www.adafruit.com/product
 
 This MPU doesnt come with magentometer. if you need to attach any such sensor you can connect it directly to MPU6050 through XCL or XDA pin (also knows as SCL_EXT and SDA_EXT) as shown in the schematic. And the INT pin is used to interrupt your microcontroller from this sensors. In low power communication,  whenever the controller goes to sleep this MPU6050 can use this interrupt pin to wake up the microcontroller to ask it to fetch the data from the sensor. Hence the microcontroller is allowed to sleep whenever the sensor is doing some operation and when the  sensor completes its operation it interrupts the processor and wakes the processor up.    
      
-<img src="../images/adafruit_6050_mpu.png" alt="Adafruit MPU6050">         
+<img src="../images/adafruit_6050_mpu.jpg" alt="Adafruit MPU6050">         
      
 <img src="../images/bbb_mpu_connection.png" alt="Connection between MPU6050 breakout board and BBB">         
       
