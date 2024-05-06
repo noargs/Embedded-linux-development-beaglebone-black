@@ -160,7 +160,57 @@ Now, we try our luck for P9_19 and P9_20 which correspond to software pins 95 an
 2. MPU-6000 and MPU_6050 [Product Speicification Revision 3.3](../Docs/MPU-6000-Datasheet1.pdf)    
 3. MPU-6000 and MPU_6050 [Register Map and Description Revision 4.2](../Docs/MPU-6000-Register-Map1.pdf)    
 
-<img src="../images/expansion_header.png" alt="Expansion Headers of BeableBone Black & Pins details">          
+<img src="../images/expansion_header.png" alt="Expansion Headers of BeableBone Black & Pins details">    
+
+### Read/Write sequence of I2C in MPU6050     
+
+Visit the [Product specification](../Docs/MPU-6000-Datasheet1.pdf) of MPU6050 and go to _page 33_ under section **9.3 I<sup>2</sup>C communications protocol** to understand the Read and Write sequence.   
+      
+**Write sequence**       
+<img src="../images/write_sequence_i2c.png" alt="I2C Write sequence of MPU6050">   
+
+**Read sequence**     
+Read always happens in 2 phases, write followed by read.    
+
+<img src="../images/read_sequence_i2c.png" alt="I2C Read sequence of MPU6050">                        
+       
+
+### ioctl    
+
+Whenever the control comes to the `main()`, we first open the I2C device file and then we set the I2C slave address using the **ioctl** command `I2C_SLAVE`. The ioctl is an API, which performs the generic I/O operation command on file descriptors. This is a linux standard function which you can use to send commands to the driver to change/set some configuration or to set some. `I2C_SLAVE` is a standard command which your driver understands (in our case, its I2C driver). `I2C_SLAVE` command we are passing into the driver through `ioctl(fd, I2C_SLAVE, MPU6050_SLAVE_ADDR)` asking to configure the I2C slave address and `MPU6050_SLAVE_ADDR` is the argument which you want to pass along with the command `I2C_SLAVE`.     
+      
+<img src="../images/ioctl.png" alt="ioctl api">    
+      
+
+**More I<sup>2</sup>C commands like I2C_SLAVE**    
+      
+ [link](https://www.kernel.org/doc/html/v4.14/driver-api/i2c.html)              
+
+**To write your own <sup>2</sup>C drivers**    
+      
+[link 1](https://www.apriorit.com/dev-blog/195-simple-driver-for-linux-os) | [Link 2](https://www.youtube.com/watch?v=7ydwrNA7zKg) | [Link 3](https://stackoverflow.com/questions/16728587/i2c-driver-in-linux)      
+
+**Checking on going I2C communication manually**    
+
+<img src="../images/i2c_ongoing_communication.png" alt="Checking the I2C communication via embedded Linux environment">      
+      
+* above screenshot taken from [Link](https://bootlin.com/blog/building-a-linux-system-for-the-stm32mp1-connecting-an-i2c-sensor/)    
+
+
+**Configuring I2C1 instead of I2C2**         
+
+[link 1](https://groups.google.com/forum/#!topic/beagleboard/LElpJ3kczow) | [Link 2](https://www.teachmemicro.com/beaglebone-black-i2c-tutorial/) | [Link 3](https://github.com/techniq/wiki/wiki/Beaglebone-I2C)     
+
+**Learn Linux device tree in detail**     
+
+[Link](https://saurabhsengarblog.wordpress.com/2015/11/28/device-tree-tutorial-arm/)                    
+
+
+            
+
+
+
+   
 
 
 
