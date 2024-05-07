@@ -172,12 +172,48 @@ Visit the [Product specification](../Docs/MPU-6000-Datasheet1.pdf) of MPU6050 an
 **Read sequence**     
 Read always happens in 2 phases, write followed by read.    
 
-<img src="../images/read_sequence_i2c.png" alt="I2C Read sequence of MPU6050">                        
+<img src="../images/read_sequence_i2c.png" alt="I2C Read sequence of MPU6050">    
+      
+
+## Running program into Beaglebone black       
+
+Build the application and drag/drop binary to the Beaglebone black hardware as shown below                         
+
+<img src="../images/drag_drop_binary_to_bbb.png" alt="drag/drop binary to the Beaglebone black hardware">     
+
+Go to eclipse window _Terminal_ and log in into bbb (bbb prompt will look something like `debian@BeagleBone:~$`). Change into _root_, and then make the binary into executable with _chmod_ by changing the file permission and run the binaries as follows:     
+
+```bash
+debian@BeagleBone:~$ cd /home/debian/Desktop
+debian@BeagleBone:~$ sudo su                 # (default password: temppwd)
+root@BeagleBone:/home/debian/Desktop#  ls 
+00_test  01_led_control  05_mpu6050_raw_read
+root@BeagleBone:/home/debian/Desktop# chmod a+x 05_mpu6050_raw_read
+root@BeagleBone:/home/debian/Desktop# ./05_mpu6050_raw_read
+```        
+
+Below readings were taken when MPU6050 was at rest on table and Full-Scale range was 0 (**FS_SEL=0**).     
+
+<img src="../images/acc_gyro_mpu_resting.png" alt="Acc/Gryo readings when MPU6050 was at rest on table FS_SEL=0">     
+
+If you take a look at the reading (taken when  in the last row the **g** value for **X** is 0.09 which is closer to 0 or we can conside it 0. Similarly **Y** reading is almost 0. Whereas **Z** raw value is 16544 which is closer to upper bound (16,384) mentioned in **6.2 Accelerometer specifications** table at page: 13 of _MPU-6000 and MPU-6050 Product Specification Revision 3.4_ when Full-Scale range is 0.      
+
+Now come to the gyro, strictly speaking gyro should show 0 0 0 for all the 3-axis. However the gyro is very sensitive to the vibrations which may be happening at the table. You may find some deflection of 1 degree per second or more in the readings.       
+
+Reading at Full-Scale range 3 (**FS_SEL=3**)    
+     
+<img src="../images/acc_gyro_mpu_resting2.png" alt="Acc/Gryo readings when MPU6050 was at rest on table FS_SEL=3">      
+     
+MPU6050 is marked with arrows for X and Y axis. The direction they are pointing to is + side (i.e. +X, +Y) whereas opposite side of where arrow pointing are negative sides (i.e. -X, -Y).      
+
+<img src="../images/mpu6050_axis.png" alt="MPU6050 axis with + and - sides">              
+
+          
        
 
 ### ioctl    
 
-Whenever the control comes to the `main()`, we first open the I2C device file and then we set the I2C slave address using the **ioctl** command `I2C_SLAVE`. The ioctl is an API, which performs the generic I/O operation command on file descriptors. This is a linux standard function which you can use to send commands to the driver to change/set some configuration or to set some. `I2C_SLAVE` is a standard command which your driver understands (in our case, its I2C driver). `I2C_SLAVE` command we are passing into the driver through `ioctl(fd, I2C_SLAVE, MPU6050_SLAVE_ADDR)` asking to configure the I2C slave address and `MPU6050_SLAVE_ADDR` is the argument which you want to pass along with the command `I2C_SLAVE`.     
+Whenever the control comes to the `main()`, we first open the I2C device file and then we set the I2C slave address using the **ioctl** command `I2C_SLAVE`. The ioctl is an API, which performs the generic I/O operation command on file descriptors. This is a linux standard function which you can use to send commands to the driver to change/set some configuration. `I2C_SLAVE` is a standard command which your driver understands (in our case, its I2C driver). `I2C_SLAVE` command we are passing into the driver through `ioctl(fd, I2C_SLAVE, MPU6050_SLAVE_ADDR)` asking to configure the I2C slave address and `MPU6050_SLAVE_ADDR` is the argument which you want to pass along with the command `I2C_SLAVE`.     
       
 <img src="../images/ioctl.png" alt="ioctl api">    
       
@@ -186,7 +222,7 @@ Whenever the control comes to the `main()`, we first open the I2C device file an
       
  [link](https://www.kernel.org/doc/html/v4.14/driver-api/i2c.html)              
 
-**To write your own <sup>2</sup>C drivers**    
+**To write your own I<sup>2</sup>C drivers**    
       
 [link 1](https://www.apriorit.com/dev-blog/195-simple-driver-for-linux-os) | [Link 2](https://www.youtube.com/watch?v=7ydwrNA7zKg) | [Link 3](https://stackoverflow.com/questions/16728587/i2c-driver-in-linux)      
 

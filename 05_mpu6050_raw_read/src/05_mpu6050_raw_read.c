@@ -74,7 +74,7 @@ int main(void)
   /* first open the I2C device file */
   if ((fd = open(I2C_DEVICE_FILE, O_RDWR)) < 0)
   {
-	perror("Failed to set I2C slave address.\n");
+	perror("Failed to open I2C device file.\n");
 	close(fd);
 	return -1;
   }
@@ -95,27 +95,28 @@ int main(void)
 	mpu6050_read_gyroscope(gyro_value);
 
 	/* convert Accelerometer values into 'g' values */
-	accx = acc_value[0]/ACC_FS_SENSITIVITY_3;
-	accy = acc_value[1]/ACC_FS_SENSITIVITY_3;
-	accz = acc_value[2]/ACC_FS_SENSITIVITY_3;
+	accx = (double) acc_value[0]/ACC_FS_SENSITIVITY_3;
+	accy = (double) acc_value[1]/ACC_FS_SENSITIVITY_3;
+	accz = (double) acc_value[2]/ACC_FS_SENSITIVITY_3;
 
 	/* convert Gyroscope raw values into '/s' (degree/seconds) */
-	gyrox = gyro_value[0]/GYR_FS_SENSITIVITY_3;
-	gyroy = gyro_value[1]/GYR_FS_SENSITIVITY_3;
-	gyroz = gyro_value[2]/GYR_FS_SENSITIVITY_3;
+	gyrox = (double) gyro_value[0]/GYR_FS_SENSITIVITY_3;
+	gyroy = (double) gyro_value[1]/GYR_FS_SENSITIVITY_3;
+	gyroz = (double) gyro_value[2]/GYR_FS_SENSITIVITY_3;
 
 	/* print the raw values read */
-	printf("Accelerometer(raw) => X:%d Y:%d Z:%d Gyroscope(raw) => X:%d Y:%d Z:%d \n", \
-		acc_value[0], acc_value[1], acc_value[2], gyro_value[0], \
-		gyro_value[1], gyro_value[2]);
+	printf("Accelerometer(raw)=> X:%d Y:%d Z:%d Gyroscope(raw)=> X:%d Y:%d Z:%d \n", \
+		acc_value[0], acc_value[1], acc_value[2], gyro_value[0], gyro_value[1], gyro_value[2]);
 
 	/* print the 'g' and '/s' values */
-	printf("Accelerometer(g) => X:%d Y:%d Z:%d Gyroscope(g) => X:%d Y:%d Z:%d \n", \
-			accx, accy, accz, gyrox, \
-			gyroy, gyroz);
+	printf("Accelerometer(g)=> X:%.2f Y:%.2f Z:%.2f Gyroscope(dps)=> X:%.2f Y:%.2f Z:%.2f \n", \
+			accx, accy, accz, gyrox, gyroy, gyroz);
+
+	printf("\n");
+
 
 	/* wait for 250000 microseconds, thats 250ms before going for another round */
-	usleep(250*1000);
+	usleep(250*10000);
   }
 }
 
@@ -126,12 +127,12 @@ int main(void)
  */
 void mpu6050_init(void)
 {
-  // 1. disable sleep mode
+  // disable sleep mode
   mpu6050_write(MPU6050_REG_POWER, 0x00);
   usleep(500);
 
   // adjust Full-Scale values for Gryoscope and Accelerometer
-  mpu6050_write(MPU6050_REG_ACCEL_CONFIG, 0x18);
+  mpu6050_write(MPU6050_REG_ACCEL_CONFIG, 0x18);            // FS_SEL=0 => 0x00; FS_SEL=3 => 0x18 (bit4=1, bit3=1, bit2=0, bit1=0, bit0=0) => 0x18
   usleep(500);
   mpu6050_write(MPU6050_REG_GYRO_CONFIG, 0x18);             // Maximum Full-Scale range FS_SEL=3 +/- 2000 degree/sec; 3 => 0xb11 => 0001 1000 => 0x18
   usleep(500);
