@@ -196,7 +196,7 @@ Below readings were taken when MPU6050 was at rest on table and Full-Scale range
 
 <img src="../images/acc_gyro_mpu_resting.png" alt="Acc/Gryo readings when MPU6050 was at rest on table FS_SEL=0">     
 
-If you take a look at the reading (taken when  in the last row the **g** value for **X** is 0.09 which is closer to 0 or we can conside it 0. Similarly **Y** reading is almost 0. Whereas **Z** raw value is 16544 which is closer to upper bound (16,384) mentioned in **6.2 Accelerometer specifications** table at page: 13 of _MPU-6000 and MPU-6050 Product Specification Revision 3.4_ when Full-Scale range is 0.      
+If you take a look at the reading in the last row, **g** value for **X** is 0.09 which is closer to 0 or we can conside it 0. Similarly **Y** reading is almost 0. Whereas **Z** raw value is 16544 which is closer to upper bound (16,384) mentioned in **6.2 Accelerometer specifications** table at page: 13 of _MPU-6000 and MPU-6050 Product Specification Revision 3.4_ when Full-Scale range is 0.      
 
 Now come to the gyro, strictly speaking gyro should show 0 0 0 for all the 3-axis. However the gyro is very sensitive to the vibrations which may be happening at the table. You may find some deflection of 1 degree per second or more in the readings.       
 
@@ -206,7 +206,9 @@ Reading at Full-Scale range 3 (**FS_SEL=3**)
      
 MPU6050 is marked with arrows for X and Y axis. The direction they are pointing to is + side (i.e. +X, +Y) whereas opposite side of where arrow pointing are negative sides (i.e. -X, -Y).      
 
-<img src="../images/mpu6050_axis.png" alt="MPU6050 axis with + and - sides">              
+<img src="../images/mpu6050_axis.png" alt="MPU6050 axis with + and - sides">         
+
+If you turn the MPU upside down then +Z will become -Z           
 
           
        
