@@ -241,7 +241,7 @@ The result we got when i titled it first in +Y direction and then -Y direction
 
 <img src="../images/positive_and_negative_y_direction.png" alt="Tilting towards Positive Y direction and Negative Y direction">         
         
-**calculating the tilt angle of our board or any object**     
+## Calculating the tilt angle of our board or any object     
       
 <img src="../images/calculating_angle.png" alt="Calculating the angle">         
 
@@ -251,9 +251,9 @@ If you want to measure the tilt angle on Y-axis then you have to take sin invers
       
 If i tilt my board by resting it on a small object as I measured the angle respect to the surface of the table it is around 12 degree. Let's try, whether we can able to derive this value experimentally. As we are not interested in x-axis. as the tilt is over y-axis. Hence I consider **y** value as 0.20 and the **z** value as 0.97. 
     
-Calculate the square root of y and z:  0.20² + 0.97² = **0.9904**  
-Divedes y with the result of square root of y and z: 0.20 / 0.9904  = **0.2019**
-Take the Inverse sine of 0.2019 = **11.64**     
+- Calculate the square root of y and z:  0.20² + 0.97² = **0.9904**  
+- Divides y with the result of square root of y and z: 0.20 / 0.9904  = **0.2019**      
+- Take the Inverse sine of 0.2019 = **11.64**     
       
 We got 11.6, which is very close to a 12 degree which i measured using my protractor.     
       
@@ -261,17 +261,17 @@ Now I have increased the tilt of my sensor to the surface and the protractors is
      
 <img src="../images/tilt_towrads_positive_y_33_degree.png" alt="Tilt towards Positive Y 33 Degree Tilt">      
      
-Calculate the square root of y and z:  0.54² + 0.82² = **0.9818**  
-Divedes y with the result of square root of y and z: 0.54 / 0.9818  = **0.5500**
-Take the Inverse sine of 0.5500 = **33.36**          
+- Calculate the square root of y and z:  0.54² + 0.82² = **0.9818**  
+- Divides y with the result of square root of y and z: 0.54 / 0.9818  = **0.5500**      
+- Take the Inverse sine of 0.5500 = **33.36**          
 
 Now, put this device to 90 degrees. The x-axis is already parallel to the ground, but the z-axis which was perpendicular to the surface, Now, went parallel to the surface. Hence we are seeing 0 values in the z-axis. However the y-axis has become perpendicular to the surface. Therefore are seeing 1g of acceleration at the y-axis.   
       
 <img src="../images/tilt_towrads_positive_y_90_degree.png" alt="Tilt towards Positive Y 90 Degree Tilt">      
      
-Calculate the square root of y and z:  0.98² + 0.01² = **0.9801**  
-Divedes y with the result of square root of y and z: 0.98 / 0.9801  = **0.9998**
-Take the Inverse sine of 1 = **90**       
+- Calculate the square root of y and z:  0.98² + 0.01² = **0.9801**  
+- Divides y with the result of square root of y and z: 0.98 / 0.9801  = **0.9998**    
+- Take the Inverse sine of 1 = **90**       
 
 
 ### ioctl    

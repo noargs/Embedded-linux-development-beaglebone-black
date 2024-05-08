@@ -1,0 +1,7 @@
+u-boot.zip
+/.metadata/
+/Debug/
+.DS_Store
+.settings
+*.launch
+
