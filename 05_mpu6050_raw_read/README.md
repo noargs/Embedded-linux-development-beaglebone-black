@@ -206,12 +206,73 @@ Reading at Full-Scale range 3 (**FS_SEL=3**)
      
 MPU6050 is marked with arrows for X and Y axis. The direction they are pointing to is + side (i.e. +X, +Y) whereas opposite side of where arrow pointing are negative sides (i.e. -X, -Y).      
 
-<img src="../images/mpu6050_axis.png" alt="MPU6050 axis with + and - sides">         
+<img src="../images/mpu6050_axis.jpg" alt="MPU6050 axis with + and - sides">         
 
-If you turn the MPU upside down then +Z will become -Z           
+If you turn the MPU upside down then +Z will become -Z     
+     
 
-          
-       
+
+## Measuring Tilt Angle of the object       
+
+Turn off all the `printf()` statements and **output the Accelerometer** with `printf("%0.2f	%0.2f	%0.2f\n", accx, accy, accz);`. Now build and drag/drop the binary into BBB's hardware via eclipse window _Remote Systems_ (We will basically make an excel sheet with 3 columns to plot the graph for visualisation). Copy the output of `05_mpu6050_raw_read` program from eclipse window named _Terminal_ and paste that onto Notepad++. Now copy each column one by one from Notepad++ on to excel sheet. by holding **alt+ctrl+shift** selecting one column after the other and paste onto excel sheet    
+
+<img src="../images/terminal_output_eclipse_window.png" alt="Terminal output eclipse window">       
+
+Now select all 3 columns of excel sheet go to _Insert_ and choose _Line_ and select _2-D Line_ from drop down     
+
+<img src="../images/excel_sheet_graph_2d_line.png" alt="Excel sheet 2-D Line graph">   
+
+Now right click on the grap click _Select Data_ and rename the columns into **x**, **y**, and **z**     
+
+<img src="../images/excel_select_data_to_change_column_name.png" alt="Change column names">     
+
+<img src="../images/excel_select_data_to_change_column_name2.png" alt="Change column names">   
+           
+  
+Now go back to your program shake the MPU6050 towards Y+ and Y- and get the reading on _Terminal_ window of eclipse and repeat the above procedure and you will get the similar graph as shown below.         
+
+<img src="../images/shake_mpu_to_get_new_graph.png" alt="Shake MPU towards Y+ and Y- axis">   
+
+<img src="../images/excel_sheet_graph_2d_line2.png" alt="Excel sheet 2-D Line graph">   
+     
+Now tilt the MPU6050 to the one side towards Y direction and plot the graph for only **Y** axis as well as for all 3 axis    
+
+The result we got when i titled it first in +Y direction and then -Y direction   
+
+<img src="../images/positive_and_negative_y_direction.png" alt="Tilting towards Positive Y direction and Negative Y direction">         
+        
+**calculating the tilt angle of our board or any object**     
+      
+<img src="../images/calculating_angle.png" alt="Calculating the angle">         
+
+If you want to measure the tilt angle on Y-axis then you have to take sin inverse of y divided by square root of y²+z² +x². You have to take all 3 components, but x is 0. Hence I omitted that. This is from your basic trigonometry.      
+     
+<img src="../images/tilt_towrads_positive_y.jpg" alt="Tilt towards Positive Y">            
+      
+If i tilt my board by resting it on a small object as I measured the angle respect to the surface of the table it is around 12 degree. Let's try, whether we can able to derive this value experimentally. As we are not interested in x-axis. as the tilt is over y-axis. Hence I consider **y** value as 0.20 and the **z** value as 0.97. 
+    
+Calculate the square root of y and z:  0.20² + 0.97² = **0.9904**  
+Divedes y with the result of square root of y and z: 0.20 / 0.9904  = **0.2019**
+Take the Inverse sine of 0.2019 = **11.64**     
+      
+We got 11.6, which is very close to a 12 degree which i measured using my protractor.     
+      
+Now I have increased the tilt of my sensor to the surface and the protractors is showing 33 degrees. Now let's run our program once again take this final value here.    
+     
+<img src="../images/tilt_towrads_positive_y_33_degree.png" alt="Tilt towards Positive Y 33 Degree Tilt">      
+     
+Calculate the square root of y and z:  0.54² + 0.82² = **0.9818**  
+Divedes y with the result of square root of y and z: 0.54 / 0.9818  = **0.5500**
+Take the Inverse sine of 0.5500 = **33.36**          
+
+Now, put this device to 90 degrees. The x-axis is already parallel to the ground, but the z-axis which was perpendicular to the surface, Now, went parallel to the surface. Hence we are seeing 0 values in the z-axis. However the y-axis has become perpendicular to the surface. Therefore are seeing 1g of acceleration at the y-axis.   
+      
+<img src="../images/tilt_towrads_positive_y_90_degree.png" alt="Tilt towards Positive Y 90 Degree Tilt">      
+     
+Calculate the square root of y and z:  0.98² + 0.01² = **0.9801**  
+Divedes y with the result of square root of y and z: 0.98 / 0.9801  = **0.9998**
+Take the Inverse sine of 1 = **90**       
+
 
 ### ioctl    
 

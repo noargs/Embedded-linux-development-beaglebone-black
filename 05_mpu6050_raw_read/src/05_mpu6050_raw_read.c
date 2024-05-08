@@ -104,6 +104,7 @@ int main(void)
 	gyroy = (double) gyro_value[1]/GYR_FS_SENSITIVITY_3;
 	gyroz = (double) gyro_value[2]/GYR_FS_SENSITIVITY_3;
 
+#if 0
 	/* print the raw values read */
 	printf("Accelerometer(raw)=> X:%d Y:%d Z:%d Gyroscope(raw)=> X:%d Y:%d Z:%d \n", \
 		acc_value[0], acc_value[1], acc_value[2], gyro_value[0], gyro_value[1], gyro_value[2]);
@@ -111,12 +112,13 @@ int main(void)
 	/* print the 'g' and '/s' values */
 	printf("Accelerometer(g)=> X:%.2f Y:%.2f Z:%.2f Gyroscope(dps)=> X:%.2f Y:%.2f Z:%.2f \n", \
 			accx, accy, accz, gyrox, gyroy, gyroz);
+#endif
 
-	printf("\n");
-
-
+#if 1
+	printf("%0.2f	%0.2f	%0.2f\n", accx, accy, accz);
+#endif
 	/* wait for 250000 microseconds, thats 250ms before going for another round */
-	usleep(250*10000);
+	usleep(250*1000);
   }
 }
 
