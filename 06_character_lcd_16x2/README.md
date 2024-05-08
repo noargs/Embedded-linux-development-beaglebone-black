@@ -39,9 +39,18 @@ Let's say, I want to transfer the letter `A`. I would make **Register select** a
      
 There are lots of LCD modules available in the market. There you have to know what exactly the LCD controller is used in that LCD module by refering to the user manual of your LCD module.
 
-Often it may be HD44780 LCD controller from HITACHI. You can take a look at a block diagram of the LCD controller. (page: 3)      
+Often it may be HD44780 LCD controller from HITACHI. You can take a look at a [block diagram](../Docs/HD44780_LCD.pdf) of the LCD controller. (page: 3)      
       
-LCD controller often have 2 registers, _Instructions register_ which is connected to instruction decoder And second one is _Data register_ which is actually connected to the DDRAM (Display Data RAM) of this controller. Any data you send, it will either go to the _Instructions register_ or to the _Data register_ depending upon the value of the Register Select (RS) pin.
+LCD controller often have 2 registers, _Instructions register_ which is connected to instruction decoder And second one is _Data register_ which is actually connected to the DDRAM (Display Data RAM) of this controller. Any data you send, it will either go to the _Instructions register_ or to the _Data register_ depending upon the value of the Register Select (RS) pin.    
+      
+Another important aspect of this controller is random access memory. There are 2 Random access memories. One is called _Display Data RAM (DDRAM)_ which stores all your data which you send from your microcontroller And another one is _CGRAM (Character Generator RAM)_ which is there to hold custom patterns for your custom characters. And this controller also has a _Character Generator ROM (CGROM)_. And there are lots of decode circuitry, shift registers (to shift your text or character, or to blink your character etc..)      
+      
+<img src="../images/hd44780_block_diagram.png" alt="Block Diagram of HD44780 LCD controller from HITACHI">     
+
+
+# Understanding DDRAM, CGRAM, CGROM     
+      
+                     
 
 
 
