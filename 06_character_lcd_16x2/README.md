@@ -19,7 +19,9 @@ You can connect 5v to **Vcc** and **LED+** (Power of backlight) pin and Ground t
 
 **DB0** to **DB7** are actually used to transfer 8 bits of data in parallel. Let's say, you want to transfer the character A, to this LCD panel to display it. The ASCII value of `A` is `0x41` that corresponds to `01000001` in binaries. When you transfer all these 8 bits `01000001` onto DB0 to DB7 lines the LCD will display the character A.      
       
-However, sometimes the microcontroller may not have 8 free pins, in that case you can also use 4 bits (D4 to D7) of data transfer (4 bit data transfer mode). And you need not to use pins from DB0 to DB3. Therefore we divide this data `0100 0001` transfer that is 8 bit data transfer into 2. The first nibble (higher order bits) `0100` and later we send second nubble `0001`.     
+However, sometimes the microcontroller may not have 8 free pins, in that case you can also use 4 bits (D4 to D7) of data transfer (4 bit data transfer mode). And you need not to use pins from DB0 to DB3. Therefore we divide this data `0100 0001` transfer that is 8 bit data transfer into 2. The first nibble (higher order bits) `0100` and later we send second nibble `0001`.     
+       
+<img src="../images/low_order_unused_datasheet.png" alt="Unused DB0 to DB3">       
     
 Data can be 2 types which includes printing tags, special characters, numbers etc. However, data can also be a LCD command like cursor off, on, text shift, and blink etc.     
       
@@ -70,12 +72,32 @@ So, what LCD controller manufacturer does is, during taping out of the chip. The
       
 So, when you send A, the controller will fetch {0x0E, 0x11, 0x1F, 0x11, 0x11, 0x00} values (8 bytes) from the CGROM, which is actually programmed into the CGROM during the taping out of the chip. Ultimately these values will be decoded to light up the appropriate pixels on the LCD panels. That's how, you get the character A displayed on the LCD. So, CGROM has support for all the ASCII characters, chinese as well as Japanese characters and some special characters which you can determine from going through the [Datasheet](../Docs/HD44780_LCD.pdf) of the controller.     
         
-In case, it doesn't support any special characters if you are looking for (As CGROM doesn't contain the pattern for this). Let's say you want to display the ♥︎ heart symbol. You will first find out what are all the pixels you need to activate to get the heart symbol then I will convert that into series of bytes just as you seen for character `A` like {0x0E, 0x11, 0x1F, 0x11, 0x11, 0x00}. You then write those values into **CGRAM**. As we cannot write into CGROM which is read only memory.
+In case, it doesn't support any special characters if you are looking for (As CGROM doesn't contain the pattern for this). Let's say you want to display the ♥︎ heart symbol. You first find out what are all the pixels you need to activate to get the heart symbol then you convert that into series of bytes just as you seen for character `A` like {0x0E, 0x11, 0x1F, 0x11, 0x11, 0x00}. You then write those values into **CGRAM**. As we cannot write into CGROM which is read only memory.     
+       
 
-
-
-
-   
-
+# Understanding LCD commands sets       
+       
+Let's learn about the LCD instructions (i.e. LCD commands). Therefore refer to the datasheet of HD44780 LCD controller. There at **Table 6** you have all the commands you can send to the LCD controller to drive the controller to display the information the way you want.    
+       
+<img src="../images/table_6_of_hd44780.png" alt="Table 6 of HD44780">         
+      
+To know more about [Entry mode](http://dinceraydin.com/lcd/commands.htm) commands.      
+       
+# Connection detail       
+       
+| BBB Expansion header pins | GPIO number | 16x2 LCD pin | Purpose |
+|:------|------:|:------|------:|
+| P8_7 | GPIO_66 | 4 (RS) |  Register selection (Character vs Command)  |
+| P8_8 | GPIO_67 | 5 (RW) |  Read/Write  |
+| P8_9  | GPIO_69 | 6 (EN) |  Enable  |
+| P8_10  | GPIO_68 | 11 (D4) |  Data line 4  |
+| P8_11  | GPIO_45 | 12 (D5) |  Data line 5  |
+| P8_12  | GPIO_44 | 13 (D6) |  Data line 6  |
+| P8_14  | GPIO_26 | 14 (D7) |  Data line 7  |
+| P8_16  | GPIO_46 | 15 (BKLTA) |  Backlight anode(+)  |
+| P9_15  | GPIO_48 | 16 (BKLTK) |  Backlight anode(-)  |
+|    |    |    |    |
+| P9_0  | ---- |  1(VSS/GND)  |  Ground  |
+| P9_7  | ---- |  2(VDD +5v)  |  +5V supply  |
 
 
