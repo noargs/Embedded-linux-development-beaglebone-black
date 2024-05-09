@@ -86,7 +86,7 @@ To know more about [Entry mode](http://dinceraydin.com/lcd/commands.htm) command
 # Connection detail       
        
 | BBB Expansion header pins | GPIO number | 16x2 LCD pin | Purpose |
-|:------|------:|:------|------:|
+|:------|:------|:------|:------|
 | P8_7 | GPIO_66 | 4 (RS) |  Register selection (Character vs Command)  |
 | P8_8 | GPIO_67 | 5 (RW) |  Read/Write  |
 | P8_9  | GPIO_69 | 6 (EN) |  Enable  |
